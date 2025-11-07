@@ -9,6 +9,7 @@ export default function MapPage() {
   const [telemetry, setTelemetry] = useState({ position: null, route: [], geofence: [] });
   const [drawMode, setDrawMode] = useState(false);
   const [draftGeofence, setDraftGeofence] = useState([]);
+  const [rotation, setRotation] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -81,7 +82,7 @@ export default function MapPage() {
             fontSize: 14,
             color: '#92400e'
           }}>
-            <strong>Drawing Mode Active:</strong> Click two points on the map to draw a square geofence area
+            <strong>Drawing Mode Active:</strong> Click and drag on the map to draw a rectangular geofence area
           </div>
         )}
         
@@ -90,7 +91,9 @@ export default function MapPage() {
             telemetry={telemetry} 
             drawMode={drawMode} 
             draftGeofence={draftGeofence} 
-            onDraftChange={setDraftGeofence} 
+            onDraftChange={setDraftGeofence}
+            rotation={rotation}
+            onRotationChange={setRotation}
           />
         </div>
         

@@ -26,13 +26,13 @@ app.use(express.json({ limit: '10mb' }));
 // In-memory stores (replace with DB later)
 const images = new Map(); // id -> { id, filename, originalName, path, analysis, createdAt }
 const telemetry = {
-  position: { lat: 37.7749, lng: -122.4194 },
+  position: { lat: 43.6532, lng: -79.3832 },
   route: [],
   geofence: [
-    { lat: 37.7755, lng: -122.421 },
-    { lat: 37.773, lng: -122.421 },
-    { lat: 37.773, lng: -122.4175 },
-    { lat: 37.7755, lng: -122.4175 }
+    { lat: 43.6555, lng: -79.391 },
+    { lat: 43.6505, lng: -79.391 },
+    { lat: 43.6505, lng: -79.3755 },
+    { lat: 43.6555, lng: -79.3755 }
   ]
 };
 
