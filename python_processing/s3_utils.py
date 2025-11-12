@@ -91,6 +91,32 @@ def upload_to_s3(file_path, s3_key=None, content_type='image/jpeg'):
         return None
 
 
+def download_from_s3(s3_key, local_path):
+    """
+    Download file from S3 to local path
+    
+    Args:
+        s3_key: S3 object key
+        local_path: Local file path to save to
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    if not S3_ENABLED:
+        return False
+    
+    try:
+        s3_client.download_file(S3_BUCKET_NAME, s3_key, local_path)
+        print(f"✓ Downloaded from S3: {s3_key} -> {local_path}")
+        return True
+    except ClientError as e:
+        print(f"Error downloading from S3: {e}")
+        return False
+    except Exception as e:
+        print(f"Unexpected error downloading from S3: {e}")
+        return False
+
+
 def get_signed_url(s3_key, expiration=3600):
     """
     Generate signed URL for private S3 object

@@ -125,6 +125,64 @@ def calculate_ndvi(image_path: str) -> Dict:
     }
 
 
+def calculate_savi(image_path: str, L: float = 0.5) -> Dict:
+    """
+    Calculate SAVI (Soil-Adjusted Vegetation Index) from an RGB image.
+    
+    SAVI = ((NIR - Red) / (NIR + Red + L)) * (1 + L)
+    Where L is a soil adjustment factor (typically 0.5)
+    
+    For RGB images, approximates NIR similar to NDVI calculation.
+    
+    Args:
+        image_path: Path to the input image file
+        L: Soil adjustment factor (default 0.5)
+        
+    Returns:
+        Dictionary with SAVI statistics
+    """
+    import cv2
+    import numpy as np
+    
+    # Read image
+    img = cv2.imread(image_path)
+    if img is None:
+        raise ValueError(f"Could not read image: {image_path}")
+    
+    # Convert BGR to RGB
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    
+    # Extract channels
+    red = img_rgb[:, :, 0].astype(np.float32)
+    green = img_rgb[:, :, 1].astype(np.float32)
+    
+    # Approximate NIR (same as NDVI)
+    nir_approx = (2.0 * green) - red
+    nir_approx = np.clip(nir_approx, 0, 255)
+    
+    # Calculate SAVI
+    denominator = red + nir_approx + L + 1e-7
+    savi = ((nir_approx - red) / denominator) * (1 + L)
+    
+    # Normalize to 0-1 range
+    savi = np.clip(savi, -1, 1)
+    savi_normalized = (savi + 1) / 2  # Scale to 0-1
+    
+    # Calculate statistics
+    mean_savi = float(np.mean(savi_normalized))
+    std_savi = float(np.std(savi_normalized))
+    min_savi = float(np.min(savi_normalized))
+    max_savi = float(np.max(savi_normalized))
+    
+    return {
+        'savi_mean': round(mean_savi, 3),
+        'savi_std': round(std_savi, 3),
+        'savi_min': round(min_savi, 3),
+        'savi_max': round(max_savi, 3),
+        'savi_map': savi_normalized.tolist()  # For visualization if needed
+    }
+
+
 def classify_crop_health_tensorflow(image_path: str, model_path: Optional[str] = None) -> Dict:
     """
     Classify crop health using a TensorFlow model.

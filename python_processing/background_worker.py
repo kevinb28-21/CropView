@@ -1,106 +1,264 @@
+#!/usr/bin/env python3
 """
-Background Worker for Automated Image Processing
-Monitors upload folder and automatically processes new images.
+Background Job Service - Image Processing Worker
+Monitors database for new image uploads and automatically processes them.
+
+Status Flow:
+    uploaded → processing → completed
+    (or failed if error occurs)
 """
-import os
 import time
+import logging
+import signal
+import sys
 from pathlib import Path
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-from image_processor import analyze_crop_health
-import json
 from dotenv import load_dotenv
+from image_processor import analyze_crop_health, calculate_savi
+from db_utils import (
+    get_pending_images,
+    set_processing_started,
+    set_processing_completed,
+    set_processing_failed,
+    save_analysis,
+    get_image_path,
+    test_connection
+)
+from s3_utils import upload_to_s3, generate_s3_key, download_from_s3
+import os
 
 load_dotenv()
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('background_worker.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Configuration
+POLL_INTERVAL = int(os.getenv('WORKER_POLL_INTERVAL', '10'))  # seconds
+BATCH_SIZE = int(os.getenv('WORKER_BATCH_SIZE', '5'))  # images per batch
 UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', './uploads')
 PROCESSED_FOLDER = os.getenv('PROCESSED_FOLDER', './processed')
-PROCESSING_LOG = os.getenv('PROCESSING_LOG', './processing_log.json')
+
+# Ensure directories exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+
+# Global flag for graceful shutdown
+running = True
 
 
-class ImageHandler(FileSystemEventHandler):
-    """Handle new image files in upload folder"""
+def signal_handler(sig, frame):
+    """Handle shutdown signals gracefully"""
+    global running
+    logger.info("Shutdown signal received, stopping worker...")
+    running = False
+
+
+def download_image_if_needed(image_record: dict) -> str:
+    """
+    Download image from S3 if needed, return local path
     
-    def __init__(self):
-        self.processed_files = self.load_processed_log()
+    Args:
+        image_record: Image record from database
     
-    def load_processed_log(self):
-        """Load list of already processed files"""
-        if os.path.exists(PROCESSING_LOG):
-            try:
-                with open(PROCESSING_LOG, 'r') as f:
-                    data = json.load(f)
-                    return set(data.get('processed_files', []))
-            except:
-                pass
-        return set()
+    Returns:
+        Local file path to image
+    """
+    # If stored in S3, download it
+    if image_record.get('s3_stored') and image_record.get('s3_key'):
+        logger.info(f"Downloading image from S3: {image_record['s3_key']}")
+        local_path = os.path.join(UPLOAD_FOLDER, image_record['filename'])
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        
+        # Download from S3
+        if download_from_s3(image_record['s3_key'], local_path):
+            if os.path.exists(local_path):
+                return local_path
+        else:
+            logger.warning(f"Failed to download from S3, trying local path")
     
-    def save_processed_log(self, filename):
-        """Save processed file to log"""
-        self.processed_files.add(filename)
-        data = {'processed_files': list(self.processed_files)}
-        with open(PROCESSING_LOG, 'w') as f:
-            json.dump(data, f)
+    # Use local file path
+    file_path = get_image_path(image_record)
+    if file_path and os.path.exists(file_path):
+        return file_path
     
-    def on_created(self, event):
-        """Called when a new file is created"""
-        if event.is_directory:
-            return
+    # Try constructing path from filename
+    if image_record.get('filename'):
+        local_path = os.path.join(UPLOAD_FOLDER, image_record['filename'])
+        if os.path.exists(local_path):
+            return local_path
+    
+    raise FileNotFoundError(f"Image file not found for {image_record.get('id')}")
+
+
+def process_image(image_record: dict) -> bool:
+    """
+    Process a single image through the analysis pipeline
+    
+    Args:
+        image_record: Image record from database
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    image_id = image_record['id']
+    logger.info(f"Processing image {image_id}: {image_record.get('filename', 'unknown')}")
+    
+    try:
+        # Step 1: Mark as processing
+        if not set_processing_started(image_id):
+            logger.error(f"Failed to mark image {image_id} as processing")
+            return False
         
-        file_path = Path(event.src_path)
-        
-        # Check if it's an image file
-        valid_extensions = {'.jpg', '.jpeg', '.png', '.tiff', '.tif'}
-        if file_path.suffix.lower() not in valid_extensions:
-            return
-        
-        # Check if already processed
-        if str(file_path) in self.processed_files:
-            return
-        
-        # Wait a moment for file to finish writing
-        time.sleep(1)
-        
-        # Process the image
-        print(f"Processing new image: {file_path.name}")
+        # Step 2: Get local file path
         try:
-            analysis = analyze_crop_health(str(file_path), use_tensorflow=False)
+            image_path = download_image_if_needed(image_record)
+        except FileNotFoundError as e:
+            logger.error(f"Image file not found: {e}")
+            set_processing_failed(image_id, str(e))
+            return False
+        
+        # Step 3: Perform analysis
+        logger.info(f"Analyzing image: {image_path}")
+        analysis_result = analyze_crop_health(image_path, use_tensorflow=False)
+        
+        # Step 4: Calculate SAVI if not already calculated
+        if 'savi_mean' not in analysis_result:
+            try:
+                savi_result = calculate_savi(image_path)
+                analysis_result.update({
+                    'savi_mean': savi_result.get('savi_mean'),
+                    'savi_std': savi_result.get('savi_std'),
+                    'savi_min': savi_result.get('savi_min'),
+                    'savi_max': savi_result.get('savi_max'),
+                })
+            except Exception as e:
+                logger.warning(f"SAVI calculation failed: {e}")
+        
+        # Step 5: Upload processed image to S3 if available
+        processed_path = analysis_result.get('processed_image_path')
+        if processed_path and os.path.exists(processed_path):
+            processed_s3_key = generate_s3_key(
+                f"processed_{image_record['filename']}",
+                prefix='processed'
+            )
+            processed_s3_url = upload_to_s3(processed_path, processed_s3_key, 'image/jpeg')
+            if processed_s3_url:
+                analysis_result['processed_s3_url'] = processed_s3_url
+                logger.info(f"Uploaded processed image to S3: {processed_s3_url}")
+        
+        # Step 6: Save analysis to database
+        if not save_analysis(image_id, analysis_result):
+            logger.error(f"Failed to save analysis for image {image_id}")
+            set_processing_failed(image_id, "Failed to save analysis")
+            return False
+        
+        # Step 7: Mark as completed
+        if not set_processing_completed(image_id):
+            logger.error(f"Failed to mark image {image_id} as completed")
+            return False
+        
+        logger.info(f"✓ Successfully processed image {image_id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error processing image {image_id}: {e}", exc_info=True)
+        set_processing_failed(image_id, str(e))
+        return False
+
+
+def process_batch():
+    """Process a batch of pending images"""
+    try:
+        # Get pending images
+        pending_images = get_pending_images(limit=BATCH_SIZE)
+        
+        if not pending_images:
+            return 0
+        
+        logger.info(f"Found {len(pending_images)} pending image(s) to process")
+        
+        processed_count = 0
+        for image_record in pending_images:
+            if not running:
+                break
             
-            # Save analysis results
-            result_file = os.path.join(PROCESSED_FOLDER, f"{file_path.stem}_analysis.json")
-            with open(result_file, 'w') as f:
-                json.dump(analysis, f, indent=2)
-            
-            print(f"✓ Analysis complete: {file_path.name}")
-            print(f"  NDVI: {analysis['ndvi_mean']:.3f}, Status: {analysis['health_status']}")
-            
-            # Mark as processed
-            self.save_processed_log(str(file_path))
-            
-        except Exception as e:
-            print(f"✗ Error processing {file_path.name}: {e}")
+            if process_image(image_record):
+                processed_count += 1
+        
+        return processed_count
+        
+    except Exception as e:
+        logger.error(f"Error in process_batch: {e}", exc_info=True)
+        return 0
 
 
 def main():
-    """Run the background worker"""
-    print(f"Monitoring folder: {UPLOAD_FOLDER}")
-    print("Press Ctrl+C to stop")
+    """Main worker loop"""
+    global running
     
-    event_handler = ImageHandler()
-    observer = Observer()
-    observer.schedule(event_handler, UPLOAD_FOLDER, recursive=False)
-    observer.start()
+    # Register signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        observer.stop()
+    logger.info("=" * 60)
+    logger.info("Background Image Processing Worker Starting")
+    logger.info("=" * 60)
     
-    observer.join()
-    print("Worker stopped")
+    # Test database connection
+    if not test_connection():
+        logger.error("Database connection failed. Exiting.")
+        sys.exit(1)
+    
+    logger.info(f"Poll interval: {POLL_INTERVAL} seconds")
+    logger.info(f"Batch size: {BATCH_SIZE} images")
+    logger.info("Worker is running. Press Ctrl+C to stop.")
+    logger.info("-" * 60)
+    
+    consecutive_errors = 0
+    max_errors = 10
+    
+    while running:
+        try:
+            processed = process_batch()
+            
+            if processed > 0:
+                logger.info(f"Processed {processed} image(s) in this batch")
+                consecutive_errors = 0
+            else:
+                # No images to process, sleep longer
+                time.sleep(POLL_INTERVAL)
+            
+            # Small delay between batches if we processed something
+            if processed > 0:
+                time.sleep(1)
+            
+        except KeyboardInterrupt:
+            logger.info("Keyboard interrupt received")
+            running = False
+            break
+        except Exception as e:
+            consecutive_errors += 1
+            logger.error(f"Error in main loop: {e}", exc_info=True)
+            
+            if consecutive_errors >= max_errors:
+                logger.error(f"Too many consecutive errors ({max_errors}). Exiting.")
+                running = False
+                break
+            
+            # Exponential backoff on errors
+            sleep_time = min(POLL_INTERVAL * (2 ** consecutive_errors), 60)
+            logger.info(f"Waiting {sleep_time} seconds before retry...")
+            time.sleep(sleep_time)
+    
+    logger.info("Background worker stopped.")
 
 
 if __name__ == '__main__':
     main()
-
