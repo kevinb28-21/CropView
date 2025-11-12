@@ -9,6 +9,11 @@ export default defineConfig({
       '/api': 'http://localhost:5050',
       '/uploads': 'http://localhost:5050'
     }
+  },
+  // Production build settings
+  build: {
+    outDir: 'dist',
+    sourcemap: false
   }
 });
 

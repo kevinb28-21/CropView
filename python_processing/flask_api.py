@@ -9,6 +9,7 @@ from pathlib import Path
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from image_processor import analyze_crop_health, calculate_ndvi
+from s3_utils import upload_to_s3, generate_s3_key, is_s3_enabled
 import json
 
 load_dotenv()
@@ -74,14 +75,41 @@ def upload_image():
     try:
         analysis = analyze_crop_health(filepath, use_tensorflow=False)  # Set True when model ready
         
+        # Upload to S3 (or use local path if S3 disabled)
+        s3_key = generate_s3_key(unique_filename)
+        # Determine content type from file extension
+        content_type = 'image/jpeg'
+        if filename.lower().endswith('.png'):
+            content_type = 'image/png'
+        elif filename.lower().endswith('.tiff') or filename.lower().endswith('.tif'):
+            content_type = 'image/tiff'
+        image_url = upload_to_s3(filepath, s3_key, content_type=content_type)
+        
+        # Use S3 URL if available, otherwise local path
+        if image_url:
+            image_path = image_url
+            s3_stored = True
+        else:
+            image_path = f'/uploads/{unique_filename}'
+            s3_stored = False
+        
+        # Upload processed image if available
+        processed_url = None
+        if analysis.get('processed_image_path') and os.path.exists(analysis['processed_image_path']):
+            processed_s3_key = generate_s3_key(f"processed_{unique_filename}", prefix='processed')
+            processed_url = upload_to_s3(analysis['processed_image_path'], processed_s3_key, 'image/jpeg')
+        
         # Store in memory (replace with PostgreSQL)
         image_id = str(len(images_db))
         images_db[image_id] = {
             'id': image_id,
             'filename': unique_filename,
             'original_name': filename,
-            'path': f'/uploads/{unique_filename}',
-            'processed_path': analysis.get('processed_image_path', ''),
+            'path': image_path,
+            's3_url': image_url,
+            's3_key': s3_key if image_url else None,
+            's3_stored': s3_stored,
+            'processed_path': processed_url or analysis.get('processed_image_path', ''),
             'gps': gps_data,
             'created_at': timestamp
         }
@@ -94,7 +122,9 @@ def upload_image():
         return jsonify({
             'id': image_id,
             'filename': unique_filename,
-            'path': f'/uploads/{unique_filename}',
+            'path': image_path,
+            's3_url': image_url,
+            's3_stored': s3_stored,
             'analysis': {
                 'ndvi': analysis['ndvi_mean'],
                 'summary': analysis['summary'],

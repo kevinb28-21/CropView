@@ -6,6 +6,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { nanoid } from 'nanoid';
+import { uploadToS3, generateS3Key, isS3Enabled, getBucketName } from './s3-utils.js';
 
 dotenv.config();
 
@@ -72,22 +73,55 @@ app.get('/api/health', (req, res) => {
 app.use('/uploads', express.static(UPLOAD_DIR));
 
 // Upload image and analyze
-app.post('/api/images', upload.single('image'), (req, res) => {
+app.post('/api/images', upload.single('image'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No image uploaded' });
   }
-  const id = nanoid(12);
-  const fileRecord = {
-    id,
-    filename: req.file.filename,
-    originalName: req.file.originalname,
-    path: `/uploads/${req.file.filename}`,
-    createdAt: new Date().toISOString()
-  };
-  const analysis = analyzeCropHealthPlaceholder(req.file.path);
-  fileRecord.analysis = analysis;
-  images.set(id, fileRecord);
-  res.json(fileRecord);
+  
+  try {
+    const id = nanoid(12);
+    
+    // Upload to S3 (or use local path if S3 disabled)
+    const s3Key = generateS3Key(req.file.filename);
+    const s3Url = await uploadToS3(req.file.path, s3Key, req.file.mimetype);
+    
+    // Use S3 URL if available, otherwise local path
+    const imagePath = s3Url || `/uploads/${req.file.filename}`;
+    const s3Stored = !!s3Url;
+    
+    // Perform analysis
+    const analysis = analyzeCropHealthPlaceholder(req.file.path);
+    
+    // Parse GPS metadata if provided (from Camera X app)
+    let gpsData = null;
+    if (req.body.gps) {
+      try {
+        gpsData = typeof req.body.gps === 'string' ? JSON.parse(req.body.gps) : req.body.gps;
+        console.log('GPS metadata received:', gpsData);
+      } catch (e) {
+        console.warn('Failed to parse GPS data:', e);
+      }
+    }
+    
+    const fileRecord = {
+      id,
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      path: imagePath,
+      s3Url: s3Url,
+      s3Key: s3Stored ? s3Key : null,
+      s3Stored: s3Stored,
+      gps: gpsData,
+      createdAt: new Date().toISOString(),
+      analysis: analysis
+    };
+    
+    images.set(id, fileRecord);
+    res.json(fileRecord);
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    res.status(500).json({ error: 'Failed to process image', details: error.message });
+  }
 });
 
 // List images
@@ -127,6 +161,12 @@ app.post('/api/telemetry', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
+  if (isS3Enabled()) {
+    console.log(`✓ S3 storage enabled: ${getBucketName()}`);
+  } else {
+    console.log('⚠️  S3 storage disabled (using local storage)');
+    console.log('   Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, and S3_BUCKET_NAME to enable');
+  }
 });
 
 
