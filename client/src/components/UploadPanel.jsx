@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { api } from '../utils/api.js';
 
 export default function UploadPanel({ onUploaded }) {
   const [file, setFile] = useState(null);
@@ -11,9 +12,7 @@ export default function UploadPanel({ onUploaded }) {
     try {
       const formData = new FormData();
       formData.append('image', file);
-      const res = await fetch('/api/images', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json();
+      const data = await api.upload('/api/images', formData);
       onUploaded?.(data);
       setFile(null);
       e.target.reset();

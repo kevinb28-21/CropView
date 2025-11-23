@@ -17,6 +17,29 @@ build/
 .env
 .env.local
 .env.*.local
+*.env
+server/.env
+python_processing/.env
+client/.env
+client/.env.local
+client/.env.production
+client/.env.development
+
+# SSH Keys and Certificates
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+MS04_ID.pem
+*.ppk
+*.cer
+*.crt
+*.p12
+*.pfx
+
+# AWS Credentials (if accidentally committed)
+*credentials*
+*aws-credentials*
 
 # Upload directories
 server/uploads/

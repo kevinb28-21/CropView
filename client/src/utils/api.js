@@ -3,7 +3,11 @@
  * Handles API calls with environment-aware base URL
  */
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+// Use environment variable in production, fallback to localhost for dev
+const API_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD 
+    ? 'http://ec2-18-223-169-5.us-east-2.compute.amazonaws.com'
+    : 'http://localhost:5050');
 
 export const api = {
   /**
@@ -11,11 +15,18 @@ export const api = {
    */
   get: async (endpoint) => {
     const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.statusText}`);
+    try {
+      const response = await fetch(url, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText} (${response.status})`);
+      }
+      return response.json();
+    } catch (error) {
+      console.error('API GET Error:', error);
+      throw error;
     }
-    return response.json();
   },
 
   /**
@@ -23,17 +34,23 @@ export const api = {
    */
   post: async (endpoint, data) => {
     const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.statusText}`);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText} (${response.status})`);
+      }
+      return response.json();
+    } catch (error) {
+      console.error('API POST Error:', error);
+      throw error;
     }
-    return response.json();
   },
 
   /**
@@ -41,14 +58,21 @@ export const api = {
    */
   upload: async (endpoint, formData) => {
     const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      body: formData,
-    });
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.statusText}`);
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API Error: ${response.statusText} (${response.status}) - ${errorText}`);
+      }
+      return response.json();
+    } catch (error) {
+      console.error('API Upload Error:', error);
+      throw error;
     }
-    return response.json();
   },
 };
 

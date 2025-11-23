@@ -1,0 +1,61 @@
+# EC2 Deployment Guide
+
+This directory contains automated deployment scripts for setting up the Drone Crop Health Platform on AWS EC2.
+
+## Quick Start
+
+### Step 1: Connect to EC2 and Transfer Files
+
+From your local machine, run:
+
+```bash
+# Make sure your key file is in the current directory or specify the path
+chmod 400 id_rsa
+
+# Transfer deployment files to EC2
+scp -i id_rsa -r deploy/ ec2-user@ec2-18-224-7-31.us-east-2.compute.amazonaws.com:~/
+```
+
+### Step 2: Run Setup Script on EC2
+
+SSH into your EC2 instance:
+
+```bash
+ssh -i id_rsa ec2-user@ec2-18-224-7-31.us-east-2.compute.amazonaws.com
+```
+
+Then run:
+
+```bash
+chmod +x ~/deploy/ec2-setup.sh
+~/deploy/ec2-setup.sh
+```
+
+### Step 3: Configure Environment Variables
+
+After the script completes, edit the environment files:
+
+```bash
+nano ~/Capstone_Interface/server/.env
+nano ~/Capstone_Interface/python_processing/.env
+```
+
+### Step 4: Restart Services
+
+```bash
+pm2 restart all
+pm2 status
+```
+
+## Files Included
+
+- `ec2-setup.sh` - Main setup script
+- `nginx.conf` - Nginx configuration
+- `env-templates/` - Environment variable templates
+
+## Manual Steps Required
+
+1. Edit `.env` files with your actual credentials
+2. Configure AWS Security Group (ports 5050, 5001, 80, 443)
+3. Update Netlify environment variable `VITE_API_URL`
+

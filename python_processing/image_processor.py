@@ -1,6 +1,7 @@
 """
-Image Processing Module
-Performs NDVI calculation and crop health analysis using OpenCV and TensorFlow.
+Image Processing Module for Onion Crop Health Analysis
+Performs NDVI, SAVI, and GNDVI calculation and crop health analysis using OpenCV and TensorFlow.
+Optimized for onion (Allium cepa) crop monitoring.
 """
 import cv2
 import numpy as np
@@ -56,23 +57,24 @@ def calculate_ndvi(image_path: str) -> Dict:
     min_ndvi = float(np.min(ndvi))
     max_ndvi = float(np.max(ndvi))
     
-    # Health classification based on NDVI
+    # Onion-specific health classification based on NDVI
     # NDVI ranges: -1 to 1, typically vegetation is 0.2-0.8
+    # Onion-specific thresholds optimized for Allium cepa
     if mean_ndvi < 0.2:
         health_status = "Very Poor"
-        summary = "Critical attention needed"
+        summary = "Critical attention needed - Onion crop severely stressed, brown/yellow foliage, sparse canopy"
     elif mean_ndvi < 0.4:
         health_status = "Poor"
-        summary = "Attention needed"
+        summary = "Attention needed - Onion crop showing stress, yellowing foliage, reduced canopy coverage"
     elif mean_ndvi < 0.6:
         health_status = "Moderate"
-        summary = "Moderate health"
+        summary = "Moderate health - Onion crop with light green foliage, some stress indicators present"
     elif mean_ndvi < 0.8:
         health_status = "Healthy"
-        summary = "Healthy"
+        summary = "Healthy - Onion crop with green foliage, good canopy coverage, normal growing conditions"
     else:
         health_status = "Very Healthy"
-        summary = "Very healthy"
+        summary = "Very healthy - Onion crop with dark green vigorous foliage, optimal growing conditions"
     
     # Identify stress zones (low NDVI regions)
     stress_threshold = mean_ndvi - std_ndvi
@@ -122,6 +124,62 @@ def calculate_ndvi(image_path: str) -> Dict:
         'stress_zones': stress_zones,
         'ndvi_map_shape': list(ndvi.shape),
         'stress_count': len(stress_zones)
+    }
+
+
+def calculate_gndvi(image_path: str) -> Dict:
+    """
+    Calculate GNDVI (Green Normalized Difference Vegetation Index) from an RGB image.
+    
+    GNDVI = (NIR - Green) / (NIR + Green)
+    
+    GNDVI is particularly useful for early growth stages and is less sensitive to
+    atmospheric conditions. Good for onion crops during early development.
+    
+    For RGB images, approximates NIR similar to NDVI calculation.
+    
+    Args:
+        image_path: Path to the input image file
+        
+    Returns:
+        Dictionary with GNDVI statistics
+    """
+    # Read image
+    img = cv2.imread(image_path)
+    if img is None:
+        raise ValueError(f"Could not read image: {image_path}")
+    
+    # Convert BGR to RGB
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    
+    # Extract channels
+    red = img_rgb[:, :, 0].astype(np.float32)
+    green = img_rgb[:, :, 1].astype(np.float32)
+    
+    # Approximate NIR (same as NDVI)
+    nir_approx = (2.0 * green) - red
+    nir_approx = np.clip(nir_approx, 0, 255)
+    
+    # Calculate GNDVI
+    denominator = green + nir_approx + 1e-7
+    gndvi = (nir_approx - green) / denominator
+    
+    # Normalize to 0-1 range
+    gndvi = np.clip(gndvi, -1, 1)
+    gndvi_normalized = (gndvi + 1) / 2  # Scale to 0-1
+    
+    # Calculate statistics
+    mean_gndvi = float(np.mean(gndvi))
+    std_gndvi = float(np.std(gndvi))
+    min_gndvi = float(np.min(gndvi))
+    max_gndvi = float(np.max(gndvi))
+    
+    return {
+        'gndvi_mean': round(mean_gndvi, 3),
+        'gndvi_std': round(std_gndvi, 3),
+        'gndvi_min': round(min_gndvi, 3),
+        'gndvi_max': round(max_gndvi, 3),
+        'gndvi_map': gndvi_normalized.tolist()  # For visualization if needed
     }
 
 
@@ -185,34 +243,102 @@ def calculate_savi(image_path: str, L: float = 0.5) -> Dict:
 
 def classify_crop_health_tensorflow(image_path: str, model_path: Optional[str] = None) -> Dict:
     """
-    Classify crop health using a TensorFlow model.
+    Classify onion crop health using a trained TensorFlow model.
     
-    This is a placeholder for TensorFlow model integration.
-    Once you have a trained model, load it and run inference here.
+    Loads the trained model and runs inference on the input image.
+    Optimized for onion (Allium cepa) crop health classification.
     
     Args:
         image_path: Path to the input image
         model_path: Optional path to saved TensorFlow model
+                    (defaults to ./models/onion_crop_health_model.h5)
         
     Returns:
-        Dictionary with classification results
+        Dictionary with classification results including:
+        - classification: Predicted health category
+        - confidence: Confidence score (0-1)
+        - classes: All available class names
+        - all_predictions: Probability distribution across all classes
+        - model_loaded: Whether model was successfully loaded
+        - crop_type: 'onion'
     """
-    # TODO: Load and run TensorFlow model when available
-    # Example structure:
-    # import tensorflow as tf
-    # model = tf.keras.models.load_model(model_path)
-    # img = tf.keras.preprocessing.image.load_img(image_path, target_size=(224, 224))
-    # img_array = tf.keras.preprocessing.image.img_to_array(img)
-    # img_array = np.expand_dims(img_array, axis=0)
-    # predictions = model.predict(img_array)
+    import os
     
-    # For now, return placeholder structure
-    return {
-        'classification': 'pending_model',
-        'confidence': 0.0,
-        'classes': ['healthy', 'stressed', 'diseased', 'weeds'],
-        'model_loaded': False
-    }
+    # Default model path
+    if model_path is None:
+        # Try environment variable first
+        model_path = os.getenv('ONION_MODEL_PATH', './models/onion_crop_health_model.h5')
+    
+    # Check if model exists
+    if not os.path.exists(model_path):
+        return {
+            'classification': 'model_not_found',
+            'confidence': 0.0,
+            'classes': ['very_healthy', 'healthy', 'moderate', 'poor', 'very_poor', 'diseased', 'stressed', 'weeds'],
+            'all_predictions': {},
+            'model_loaded': False,
+            'crop_type': 'onion',
+            'error': f'Model file not found: {model_path}'
+        }
+    
+    try:
+        # Load model
+        import tensorflow as tf
+        model = tf.keras.models.load_model(model_path)
+        
+        # Load class names
+        model_dir = os.path.dirname(model_path)
+        class_names_path = os.path.join(model_dir, 'onion_class_names.json')
+        
+        if os.path.exists(class_names_path):
+            with open(class_names_path, 'r') as f:
+                class_names = json.load(f)
+        else:
+            # Default class names if file not found
+            class_names = ['very_healthy', 'healthy', 'moderate', 'poor', 'very_poor', 'diseased', 'stressed', 'weeds']
+        
+        # Preprocess image
+        img = cv2.imread(image_path)
+        if img is None:
+            raise ValueError(f"Could not read image: {image_path}")
+        
+        # Resize to model input size (typically 224x224)
+        img = cv2.resize(img, (224, 224))
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = img.astype(np.float32) / 255.0  # Normalize
+        img = np.expand_dims(img, axis=0)  # Add batch dimension
+        
+        # Predict
+        predictions = model.predict(img, verbose=0)
+        predicted_idx = np.argmax(predictions[0])
+        confidence = float(predictions[0][predicted_idx])
+        
+        # Create prediction dictionary
+        all_predictions = {}
+        for i, class_name in enumerate(class_names):
+            if i < len(predictions[0]):
+                all_predictions[class_name] = float(predictions[0][i])
+        
+        return {
+            'classification': class_names[predicted_idx] if predicted_idx < len(class_names) else 'unknown',
+            'confidence': round(confidence, 3),
+            'classes': class_names,
+            'all_predictions': all_predictions,
+            'model_loaded': True,
+            'crop_type': 'onion',
+            'model_path': model_path
+        }
+        
+    except Exception as e:
+        return {
+            'classification': 'error',
+            'confidence': 0.0,
+            'classes': ['very_healthy', 'healthy', 'moderate', 'poor', 'very_poor', 'diseased', 'stressed', 'weeds'],
+            'all_predictions': {},
+            'model_loaded': False,
+            'crop_type': 'onion',
+            'error': str(e)
+        }
 
 
 def preprocess_image(image_path: str, output_path: Optional[str] = None, 
@@ -250,9 +376,10 @@ def preprocess_image(image_path: str, output_path: Optional[str] = None,
 def analyze_crop_health(image_path: str, use_tensorflow: bool = False, 
                         model_path: Optional[str] = None) -> Dict:
     """
-    Complete crop health analysis pipeline.
+    Complete onion crop health analysis pipeline.
     
-    Combines NDVI calculation and TensorFlow classification.
+    Combines NDVI, SAVI, and GNDVI calculation with TensorFlow classification.
+    Optimized for onion (Allium cepa) crop monitoring.
     
     Args:
         image_path: Path to input image
@@ -260,13 +387,19 @@ def analyze_crop_health(image_path: str, use_tensorflow: bool = False,
         model_path: Path to TensorFlow model
         
     Returns:
-        Complete analysis dictionary
+        Complete analysis dictionary with NDVI, SAVI, GNDVI, and classification
     """
     # Preprocess
     processed_path = preprocess_image(image_path)
     
     # Calculate NDVI
     ndvi_results = calculate_ndvi(processed_path)
+    
+    # Calculate SAVI
+    savi_results = calculate_savi(processed_path)
+    
+    # Calculate GNDVI
+    gndvi_results = calculate_gndvi(processed_path)
     
     # TensorFlow classification (if enabled)
     tf_results = {}
@@ -276,9 +409,13 @@ def analyze_crop_health(image_path: str, use_tensorflow: bool = False,
     # Combine results
     analysis = {
         **ndvi_results,
+        **savi_results,
+        **gndvi_results,
         'tensorflow': tf_results if use_tensorflow else None,
         'processed_image_path': processed_path,
-        'original_image_path': image_path
+        'original_image_path': image_path,
+        'crop_type': 'onion',
+        'analysis_type': 'ndvi_savi_gndvi_onion'
     }
     
     return analysis

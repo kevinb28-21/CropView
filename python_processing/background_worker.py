@@ -13,7 +13,7 @@ import signal
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
-from image_processor import analyze_crop_health, calculate_savi
+from image_processor import analyze_crop_health, calculate_savi, calculate_gndvi
 from db_utils import (
     get_pending_images,
     set_processing_started,
@@ -124,11 +124,12 @@ def process_image(image_record: dict) -> bool:
             set_processing_failed(image_id, str(e))
             return False
         
-        # Step 3: Perform analysis
-        logger.info(f"Analyzing image: {image_path}")
+        # Step 3: Perform analysis (includes NDVI, SAVI, GNDVI)
+        logger.info(f"Analyzing onion crop image: {image_path}")
         analysis_result = analyze_crop_health(image_path, use_tensorflow=False)
         
-        # Step 4: Calculate SAVI if not already calculated
+        # Ensure all vegetation indices are calculated
+        # (analyze_crop_health should include all, but double-check)
         if 'savi_mean' not in analysis_result:
             try:
                 savi_result = calculate_savi(image_path)
@@ -140,6 +141,18 @@ def process_image(image_record: dict) -> bool:
                 })
             except Exception as e:
                 logger.warning(f"SAVI calculation failed: {e}")
+        
+        if 'gndvi_mean' not in analysis_result:
+            try:
+                gndvi_result = calculate_gndvi(image_path)
+                analysis_result.update({
+                    'gndvi_mean': gndvi_result.get('gndvi_mean'),
+                    'gndvi_std': gndvi_result.get('gndvi_std'),
+                    'gndvi_min': gndvi_result.get('gndvi_min'),
+                    'gndvi_max': gndvi_result.get('gndvi_max'),
+                })
+            except Exception as e:
+                logger.warning(f"GNDVI calculation failed: {e}")
         
         # Step 5: Upload processed image to S3 if available
         processed_path = analysis_result.get('processed_image_path')

@@ -202,7 +202,8 @@ def get_data():
                 cur.execute("""
                     SELECT i.*, 
                            g.latitude, g.longitude, g.altitude,
-                           a.ndvi_mean, a.savi_mean, a.health_status, a.summary
+                           a.ndvi_mean, a.savi_mean, a.health_status, a.summary,
+                           a.analysis_type
                     FROM images i
                     LEFT JOIN image_gps g ON i.id = g.image_id
                     LEFT JOIN analyses a ON i.id = a.image_id
@@ -218,7 +219,8 @@ def get_data():
                     SELECT i.id, i.filename, i.original_name, i.s3_url, i.file_path,
                            i.uploaded_at, i.processing_status,
                            g.latitude, g.longitude,
-                           a.ndvi_mean, a.savi_mean, a.health_status, a.summary
+                           a.ndvi_mean, a.savi_mean, a.health_status, a.summary,
+                           a.analysis_type
                     FROM images i
                     LEFT JOIN image_gps g ON i.id = g.image_id
                     LEFT JOIN analyses a ON i.id = a.image_id

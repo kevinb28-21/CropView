@@ -162,60 +162,141 @@ def save_analysis(image_id: str, analysis_data: Dict) -> bool:
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
-            # Insert or update analysis
-            cur.execute("""
-                INSERT INTO analyses (
-                    image_id, ndvi_mean, ndvi_std, ndvi_min, ndvi_max,
-                    savi_mean, savi_std, savi_min, savi_max,
-                    health_score, health_status, summary,
-                    analysis_type, model_version, confidence,
-                    processed_image_path, processed_s3_url,
-                    processed_at
-                ) VALUES (
-                    %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s,
-                    %s, %s, %s,
-                    %s, %s, %s,
-                    %s, %s,
-                    CURRENT_TIMESTAMP
-                )
-                ON CONFLICT (image_id) DO UPDATE SET
-                    ndvi_mean = EXCLUDED.ndvi_mean,
-                    ndvi_std = EXCLUDED.ndvi_std,
-                    ndvi_min = EXCLUDED.ndvi_min,
-                    ndvi_max = EXCLUDED.ndvi_max,
-                    savi_mean = EXCLUDED.savi_mean,
-                    savi_std = EXCLUDED.savi_std,
-                    savi_min = EXCLUDED.savi_min,
-                    savi_max = EXCLUDED.savi_max,
-                    health_score = EXCLUDED.health_score,
-                    health_status = EXCLUDED.health_status,
-                    summary = EXCLUDED.summary,
-                    analysis_type = EXCLUDED.analysis_type,
-                    model_version = EXCLUDED.model_version,
-                    confidence = EXCLUDED.confidence,
-                    processed_image_path = EXCLUDED.processed_image_path,
-                    processed_s3_url = EXCLUDED.processed_s3_url,
-                    updated_at = CURRENT_TIMESTAMP
-            """, (
-                image_id,
-                analysis_data.get('ndvi_mean'),
-                analysis_data.get('ndvi_std'),
-                analysis_data.get('ndvi_min'),
-                analysis_data.get('ndvi_max'),
-                analysis_data.get('savi_mean'),
-                analysis_data.get('savi_std'),
-                analysis_data.get('savi_min'),
-                analysis_data.get('savi_max'),
-                analysis_data.get('health_score'),
-                analysis_data.get('health_status'),
-                analysis_data.get('summary'),
-                analysis_data.get('analysis_type', 'opencv'),
-                analysis_data.get('model_version'),
-                analysis_data.get('confidence'),
-                analysis_data.get('processed_image_path'),
-                analysis_data.get('processed_s3_url'),
-            ))
+            # Insert or update analysis (including GNDVI if columns exist)
+            # Try to include GNDVI, but handle case where migration hasn't been run
+            try:
+                # Check if GNDVI columns exist
+                cur.execute("""
+                    SELECT column_name FROM information_schema.columns 
+                    WHERE table_name='analyses' AND column_name='gndvi_mean'
+                """)
+                has_gndvi = cur.fetchone() is not None
+            except:
+                has_gndvi = False
+            
+            if has_gndvi:
+                # Include GNDVI columns
+                cur.execute("""
+                    INSERT INTO analyses (
+                        image_id, ndvi_mean, ndvi_std, ndvi_min, ndvi_max,
+                        savi_mean, savi_std, savi_min, savi_max,
+                        gndvi_mean, gndvi_std, gndvi_min, gndvi_max,
+                        health_score, health_status, summary,
+                        analysis_type, model_version, confidence,
+                        processed_image_path, processed_s3_url,
+                        processed_at
+                    ) VALUES (
+                        %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s,
+                        %s, %s, %s, %s,
+                        %s, %s, %s,
+                        %s, %s, %s,
+                        %s, %s,
+                        CURRENT_TIMESTAMP
+                    )
+                    ON CONFLICT (image_id) DO UPDATE SET
+                        ndvi_mean = EXCLUDED.ndvi_mean,
+                        ndvi_std = EXCLUDED.ndvi_std,
+                        ndvi_min = EXCLUDED.ndvi_min,
+                        ndvi_max = EXCLUDED.ndvi_max,
+                        savi_mean = EXCLUDED.savi_mean,
+                        savi_std = EXCLUDED.savi_std,
+                        savi_min = EXCLUDED.savi_min,
+                        savi_max = EXCLUDED.savi_max,
+                        gndvi_mean = EXCLUDED.gndvi_mean,
+                        gndvi_std = EXCLUDED.gndvi_std,
+                        gndvi_min = EXCLUDED.gndvi_min,
+                        gndvi_max = EXCLUDED.gndvi_max,
+                        health_score = EXCLUDED.health_score,
+                        health_status = EXCLUDED.health_status,
+                        summary = EXCLUDED.summary,
+                        analysis_type = EXCLUDED.analysis_type,
+                        model_version = EXCLUDED.model_version,
+                        confidence = EXCLUDED.confidence,
+                        processed_image_path = EXCLUDED.processed_image_path,
+                        processed_s3_url = EXCLUDED.processed_s3_url,
+                        updated_at = CURRENT_TIMESTAMP
+                """, (
+                    image_id,
+                    analysis_data.get('ndvi_mean'),
+                    analysis_data.get('ndvi_std'),
+                    analysis_data.get('ndvi_min'),
+                    analysis_data.get('ndvi_max'),
+                    analysis_data.get('savi_mean'),
+                    analysis_data.get('savi_std'),
+                    analysis_data.get('savi_min'),
+                    analysis_data.get('savi_max'),
+                    analysis_data.get('gndvi_mean'),
+                    analysis_data.get('gndvi_std'),
+                    analysis_data.get('gndvi_min'),
+                    analysis_data.get('gndvi_max'),
+                    analysis_data.get('health_score'),
+                    analysis_data.get('health_status'),
+                    analysis_data.get('summary'),
+                    analysis_data.get('analysis_type', 'ndvi_savi_gndvi_onion'),
+                    analysis_data.get('model_version'),
+                    analysis_data.get('confidence'),
+                    analysis_data.get('processed_image_path'),
+                    analysis_data.get('processed_s3_url'),
+                ))
+            else:
+                # Fallback without GNDVI columns
+                cur.execute("""
+                    INSERT INTO analyses (
+                        image_id, ndvi_mean, ndvi_std, ndvi_min, ndvi_max,
+                        savi_mean, savi_std, savi_min, savi_max,
+                        health_score, health_status, summary,
+                        analysis_type, model_version, confidence,
+                        processed_image_path, processed_s3_url,
+                        processed_at
+                    ) VALUES (
+                        %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s,
+                        %s, %s, %s,
+                        %s, %s, %s,
+                        %s, %s,
+                        CURRENT_TIMESTAMP
+                    )
+                    ON CONFLICT (image_id) DO UPDATE SET
+                        ndvi_mean = EXCLUDED.ndvi_mean,
+                        ndvi_std = EXCLUDED.ndvi_std,
+                        ndvi_min = EXCLUDED.ndvi_min,
+                        ndvi_max = EXCLUDED.ndvi_max,
+                        savi_mean = EXCLUDED.savi_mean,
+                        savi_std = EXCLUDED.savi_std,
+                        savi_min = EXCLUDED.savi_min,
+                        savi_max = EXCLUDED.savi_max,
+                        health_score = EXCLUDED.health_score,
+                        health_status = EXCLUDED.health_status,
+                        summary = EXCLUDED.summary,
+                        analysis_type = EXCLUDED.analysis_type,
+                        model_version = EXCLUDED.model_version,
+                        confidence = EXCLUDED.confidence,
+                        processed_image_path = EXCLUDED.processed_image_path,
+                        processed_s3_url = EXCLUDED.processed_s3_url,
+                        updated_at = CURRENT_TIMESTAMP
+                """, (
+                    image_id,
+                    analysis_data.get('ndvi_mean'),
+                    analysis_data.get('ndvi_std'),
+                    analysis_data.get('ndvi_min'),
+                    analysis_data.get('ndvi_max'),
+                    analysis_data.get('savi_mean'),
+                    analysis_data.get('savi_std'),
+                    analysis_data.get('savi_min'),
+                    analysis_data.get('savi_max'),
+                    analysis_data.get('health_score'),
+                    analysis_data.get('health_status'),
+                    analysis_data.get('summary'),
+                    analysis_data.get('analysis_type', 'ndvi_savi_gndvi_onion'),
+                    analysis_data.get('model_version'),
+                    analysis_data.get('confidence'),
+                    analysis_data.get('processed_image_path'),
+                    analysis_data.get('processed_s3_url'),
+                ))
+            
+            # Store GNDVI in a JSON field or separate table if schema doesn't support it yet
+            # For now, we'll store it in the summary or create a migration script
             
             # Save stress zones if provided
             if 'stress_zones' in analysis_data and analysis_data['stress_zones']:

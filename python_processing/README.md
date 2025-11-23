@@ -1,11 +1,18 @@
 # Python Image Processing Service
 
-This directory contains the Python-based image processing pipeline as specified in the architecture.
+This directory contains the Python-based image processing pipeline for onion crop health monitoring.
+
+> 📚 **For complete documentation, see [docs/python-processing/README.md](../docs/python-processing/README.md)**
 
 ## Components
 
-- `image_processor.py`: Core image processing functions (NDVI calculation, preprocessing, TensorFlow integration)
-- `flask_api.py`: Flask REST API for receiving images from Raspberry Pi
+- `image_processor.py`: Core image processing functions (NDVI, SAVI, GNDVI calculation, TensorFlow integration)
+- `flask_api_db.py`: Flask REST API with database integration
+- `background_worker.py`: Automated image processing worker
+- `db_utils.py`: Database utilities
+- `s3_utils.py`: S3 storage utilities
+- `batch_test_ndvi.py`: Batch testing script for vegetation indices
+- `train_model.py`: ML model training script
 - `requirements.txt`: Python dependencies
 
 ## Setup

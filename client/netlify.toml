@@ -6,17 +6,17 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# Redirect API calls to backend (update with your backend URL)
+# Redirect API calls to backend
 [[redirects]]
   from = "/api/*"
-  to = "https://your-backend-url.railway.app/api/:splat"
+  to = "http://ec2-18-223-169-5.us-east-2.compute.amazonaws.com/api/:splat"
   status = 200
   force = true
 
 # Redirect uploads to backend
 [[redirects]]
   from = "/uploads/*"
-  to = "https://your-backend-url.railway.app/uploads/:splat"
+  to = "http://ec2-18-223-169-5.us-east-2.compute.amazonaws.com/uploads/:splat"
   status = 200
   force = true
 

@@ -1,9 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import UploadPanel from '../components/UploadPanel.jsx';
-
-const api = {
-  listImages: async () => (await fetch('/api/images')).json()
-};
+import { api } from '../utils/api.js';
 
 export default function AnalyticsPage() {
   const [images, setImages] = useState([]);
@@ -14,7 +11,7 @@ export default function AnalyticsPage() {
     let mounted = true;
     const load = async () => {
       try {
-        const imgs = await api.listImages();
+        const imgs = await api.get('/api/images');
         if (mounted) setImages(imgs);
       } catch {}
     };
@@ -41,7 +38,7 @@ export default function AnalyticsPage() {
                 >
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
                     <img 
-                      src={img.path} 
+                      src={img.s3Url || img.path} 
                       alt={img.originalName} 
                       style={{ 
                         width: 56, 
@@ -50,6 +47,12 @@ export default function AnalyticsPage() {
                         borderRadius: 8, 
                         border: '1px solid #e5e7eb' 
                       }} 
+                      onError={(e) => {
+                        // Fallback to path if S3 URL fails
+                        if (img.s3Url && img.path) {
+                          e.target.src = img.path;
+                        }
+                      }}
                     />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>
@@ -99,10 +102,10 @@ export default function AnalyticsPage() {
                 </div>
               </div>
               
-              {selectedImage.path && (
+              {(selectedImage.s3Url || selectedImage.path) && (
                 <div style={{ marginBottom: 20 }}>
                   <img 
-                    src={selectedImage.path} 
+                    src={selectedImage.s3Url || selectedImage.path} 
                     alt={selectedImage.originalName}
                     style={{ 
                       width: '100%', 
@@ -110,6 +113,12 @@ export default function AnalyticsPage() {
                       border: '1px solid #e5e7eb',
                       marginBottom: 16
                     }} 
+                    onError={(e) => {
+                      // Fallback to path if S3 URL fails
+                      if (selectedImage.s3Url && selectedImage.path) {
+                        e.target.src = selectedImage.path;
+                      }
+                    }}
                   />
                 </div>
               )}

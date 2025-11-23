@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import DashboardMap from '../components/DashboardMap.jsx';
-
-const api = {
-  getTelemetry: async () => (await fetch('/api/telemetry')).json()
-};
+import { api } from '../utils/api.js';
 
 export default function MapPage() {
   const [telemetry, setTelemetry] = useState({ position: null, route: [], geofence: [] });
@@ -15,7 +12,7 @@ export default function MapPage() {
     let mounted = true;
     const fetchTel = async () => {
       try {
-        const tel = await api.getTelemetry();
+        const tel = await api.get('/api/telemetry');
         if (mounted) setTelemetry(tel);
       } catch {}
     };
@@ -54,12 +51,8 @@ export default function MapPage() {
             <button
               onClick={async () => {
                 if (draftGeofence.length < 3) return;
-                await fetch('/api/telemetry', { 
-                  method: 'POST', 
-                  headers: { 'Content-Type': 'application/json' }, 
-                  body: JSON.stringify({ geofence: draftGeofence }) 
-                });
-                const tel = await api.getTelemetry();
+                await api.post('/api/telemetry', { geofence: draftGeofence });
+                const tel = await api.get('/api/telemetry');
                 setTelemetry(tel);
                 setDrawMode(false);
                 setDraftGeofence([]);
