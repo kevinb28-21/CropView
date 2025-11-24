@@ -23,8 +23,8 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = process.env.PORT || 5000;
-const ORIGIN = process.env.ORIGIN || 'http://localhost:5173';
+const PORT = process.env.PORT || 5050;
+const ORIGIN = process.env.ORIGIN || 'http://localhost:5173,http://localhost:5182';
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads');
 
 // Ensure upload dir exists
@@ -146,11 +146,12 @@ app.post('/api/images', upload.single('image'), async (req, res) => {
     
     // Save to database with status 'uploaded'
     // Background worker will automatically process it
+    // Always save local file path - worker needs it even if S3 is enabled
     const imageId = await saveImage({
       id,
       filename: req.file.filename,
       originalName: req.file.originalname,
-      filePath: s3Stored ? null : req.file.path, // Store local path for processing if not S3
+      filePath: req.file.path, // Always store local path for worker processing
       s3Url: s3Url,
       s3Key: s3Stored ? s3Key : null,
       s3Stored: s3Stored,
