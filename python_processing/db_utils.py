@@ -373,25 +373,49 @@ def save_analysis(image_id: str, analysis_data: Dict) -> bool:
 
 def get_image_path(image_record: Dict) -> Optional[str]:
     """
-    Get local file path for an image record
+    Get local file path for an image record with robust path resolution
+    Tries multiple locations in order of priority
     
     Returns:
-        Local file path or None if not available
+        Local file path or None if not found
     """
-    # Try S3 URL first (download needed)
-    if image_record.get('s3_stored') and image_record.get('s3_url'):
-        # For now, return None - would need to download from S3
-        # In production, you might want to download temporarily
+    filename = image_record.get('filename')
+    if not filename:
         return None
     
-    # Try local file path
-    if image_record.get('file_path'):
-        return image_record['file_path']
+    # Priority 1: Use stored file_path if it exists and file exists
+    stored_path = image_record.get('file_path')
+    if stored_path and os.path.exists(stored_path):
+        return stored_path
     
-    # Try constructing from filename
-    if image_record.get('filename'):
-        upload_folder = os.getenv('UPLOAD_FOLDER', './uploads')
-        return os.path.join(upload_folder, image_record['filename'])
+    # Priority 2: Try server/uploads directory (most common location)
+    # This is where Node.js backend saves files
+    server_uploads = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), 
+        'server', 'uploads', filename
+    )
+    if os.path.exists(server_uploads):
+        return server_uploads
+    
+    # Priority 3: Try configured UPLOAD_FOLDER
+    upload_folder = os.getenv('UPLOAD_FOLDER', './uploads')
+    if upload_folder and upload_folder != './uploads':  # Only if explicitly set
+        constructed_path = os.path.join(upload_folder, filename)
+        if os.path.exists(constructed_path):
+            return constructed_path
+    
+    # Priority 4: Try python_processing/uploads (fallback)
+    python_uploads = os.path.join(
+        os.path.dirname(__file__), 
+        'uploads', filename
+    )
+    if os.path.exists(python_uploads):
+        return python_uploads
+    
+    # Priority 5: Try relative uploads folder
+    relative_uploads = os.path.join('uploads', filename)
+    if os.path.exists(relative_uploads):
+        return os.path.abspath(relative_uploads)
     
     return None
 
