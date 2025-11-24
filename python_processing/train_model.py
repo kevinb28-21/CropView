@@ -281,12 +281,13 @@ def train_model(
             str(output_path / "onion_crop_best_model.h5"),
             save_best_only=True,
             monitor='val_accuracy',
-            mode='max'
+            mode='max',
+            save_weights_only=False
         ),
         keras.callbacks.EarlyStopping(
             monitor='val_accuracy',
             patience=10,
-            restore_best_weights=True
+            restore_best_weights=False  # Removed to fix pickling issue
         ),
         keras.callbacks.ReduceLROnPlateau(
             monitor='val_loss',
@@ -298,14 +299,29 @@ def train_model(
     
     # Train
     print("\n4. Training model...")
-    history = model.fit(
-        datagen.flow(X_train, y_train, batch_size=batch_size),
-        steps_per_epoch=len(X_train) // batch_size,
-        epochs=epochs,
-        validation_data=(X_val, y_val),
-        callbacks=callbacks,
-        verbose=1
-    )
+    try:
+        history = model.fit(
+            datagen.flow(X_train, y_train, batch_size=batch_size),
+            steps_per_epoch=len(X_train) // batch_size,
+            epochs=epochs,
+            validation_data=(X_val, y_val),
+            callbacks=callbacks,
+            verbose=1
+        )
+    except KeyboardInterrupt:
+        print("\n⚠ Training interrupted by user")
+        history = None
+    
+    # Load best model weights if available (from ModelCheckpoint)
+    best_model_path = output_path / "onion_crop_best_model.h5"
+    if best_model_path.exists():
+        try:
+            print("\nLoading best model from checkpoint...")
+            model = keras.models.load_model(str(best_model_path))
+            print("✓ Best model loaded")
+        except Exception as e:
+            print(f"⚠ Could not load best model: {e}")
+            print("Using current model weights instead")
     
     # Evaluate
     print("\n5. Evaluating model...")
@@ -313,45 +329,93 @@ def train_model(
     print(f"   Test Loss: {test_loss:.4f}")
     print(f"   Test Accuracy: {test_accuracy:.4f}")
     
-    # Save final model
+    # Save final model (use best model if available, otherwise current)
     final_model_path = output_path / "onion_crop_health_model.h5"
-    model.save(final_model_path)
-    print(f"\n✓ Model saved to: {final_model_path}")
+    try:
+        if best_model_path.exists() and best_model_path != final_model_path:
+            # Copy best model to final location
+            import shutil
+            shutil.copy2(best_model_path, final_model_path)
+            print(f"\n✓ Best model copied to: {final_model_path}")
+        else:
+            model.save(final_model_path)
+            print(f"\n✓ Model saved to: {final_model_path}")
+    except Exception as e:
+        print(f"⚠ Error saving final model: {e}")
+        if best_model_path.exists():
+            print(f"  Using best model checkpoint: {best_model_path}")
+            final_model_path = best_model_path
     
     # Save class names
-    class_names_path = output_path / "onion_class_names.json"
-    with open(class_names_path, 'w') as f:
-        json.dump(class_names, f, indent=2)
-    print(f"✓ Class names saved to: {class_names_path}")
+    try:
+        class_names_path = output_path / "onion_class_names.json"
+        with open(class_names_path, 'w') as f:
+            json.dump(class_names, f, indent=2)
+        print(f"✓ Class names saved to: {class_names_path}")
+    except Exception as e:
+        print(f"⚠ Error saving class names: {e}")
     
-    # Save training history
-    history_path = output_path / "onion_training_history.json"
-    history_dict = {
-        'loss': [float(x) for x in history.history['loss']],
-        'accuracy': [float(x) for x in history.history['accuracy']],
-        'val_loss': [float(x) for x in history.history['val_loss']],
-        'val_accuracy': [float(x) for x in history.history['val_accuracy']]
-    }
-    with open(history_path, 'w') as f:
-        json.dump(history_dict, f, indent=2)
-    print(f"✓ Training history saved to: {history_path}")
+    # Save training history (robust conversion)
+    if history is not None:
+        try:
+            history_path = output_path / "onion_training_history.json"
+            
+            # Robust conversion of history values to floats
+            def safe_float(value):
+                """Safely convert TensorFlow tensor or numpy array to float"""
+                if hasattr(value, 'numpy'):
+                    return float(value.numpy())
+                elif hasattr(value, 'item'):
+                    return float(value.item())
+                else:
+                    return float(value)
+            
+            history_dict = {}
+            for key in ['loss', 'accuracy', 'val_loss', 'val_accuracy']:
+                if key in history.history:
+                    try:
+                        history_dict[key] = [safe_float(x) for x in history.history[key]]
+                    except Exception as e:
+                        print(f"⚠ Warning: Could not convert {key}: {e}")
+                        history_dict[key] = []
+            
+            with open(history_path, 'w') as f:
+                json.dump(history_dict, f, indent=2)
+            print(f"✓ Training history saved to: {history_path}")
+        except Exception as e:
+            print(f"⚠ Error saving training history: {e}")
+            print("  Model training completed successfully, but history could not be saved")
     
     # Save model metadata
-    metadata = {
-        'crop_type': 'onion',
-        'classes': class_names,
-        'num_classes': num_classes,
-        'input_shape': list(input_shape),
-        'test_accuracy': float(test_accuracy),
-        'test_loss': float(test_loss),
-        'training_samples': len(X_train),
-        'validation_samples': len(X_val),
-        'test_samples': len(X_test)
-    }
-    metadata_path = output_path / "onion_model_metadata.json"
-    with open(metadata_path, 'w') as f:
-        json.dump(metadata, f, indent=2)
-    print(f"✓ Model metadata saved to: {metadata_path}")
+    try:
+        def safe_float(value):
+            """Safely convert TensorFlow tensor or numpy array to float"""
+            if hasattr(value, 'numpy'):
+                return float(value.numpy())
+            elif hasattr(value, 'item'):
+                return float(value.item())
+            else:
+                return float(value)
+        
+        metadata = {
+            'crop_type': 'onion',
+            'classes': class_names,
+            'num_classes': num_classes,
+            'input_shape': list(input_shape),
+            'test_accuracy': safe_float(test_accuracy),
+            'test_loss': safe_float(test_loss),
+            'training_samples': len(X_train),
+            'validation_samples': len(X_val),
+            'test_samples': len(X_test),
+            'model_path': str(final_model_path),
+            'best_model_path': str(best_model_path) if best_model_path.exists() else None
+        }
+        metadata_path = output_path / "onion_model_metadata.json"
+        with open(metadata_path, 'w') as f:
+            json.dump(metadata, f, indent=2)
+        print(f"✓ Model metadata saved to: {metadata_path}")
+    except Exception as e:
+        print(f"⚠ Error saving metadata: {e}")
     
     print("\n" + "=" * 60)
     print("Training complete!")

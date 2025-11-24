@@ -74,3 +74,9 @@ ENV/
 *.tmp
 *.temp
 
+# ML Models and Training Data
+python_processing/models/*.h5
+python_processing/models/*.pkl
+python_processing/training_data/
+python_processing/training_output.log
+
