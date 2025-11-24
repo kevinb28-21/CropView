@@ -42,7 +42,9 @@ logger = logging.getLogger(__name__)
 # Configuration
 POLL_INTERVAL = int(os.getenv('WORKER_POLL_INTERVAL', '10'))  # seconds
 BATCH_SIZE = int(os.getenv('WORKER_BATCH_SIZE', '5'))  # images per batch
-UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', './uploads')
+# Use server uploads directory if images are stored there
+SERVER_UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'server', 'uploads')
+UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', SERVER_UPLOAD_DIR if os.path.exists(SERVER_UPLOAD_DIR) else './uploads')
 PROCESSED_FOLDER = os.getenv('PROCESSED_FOLDER', './processed')
 
 # Ensure directories exist

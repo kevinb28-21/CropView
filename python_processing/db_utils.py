@@ -10,6 +10,14 @@ from dotenv import load_dotenv
 from typing import Dict, List, Optional
 import logging
 
+# Register numpy adapters for psycopg2
+try:
+    import numpy as np
+    psycopg2.extensions.register_adapter(np.integer, lambda x: psycopg2.extensions.AsIs(int(x)))
+    psycopg2.extensions.register_adapter(np.floating, lambda x: psycopg2.extensions.AsIs(float(x)))
+except ImportError:
+    pass
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -147,6 +155,31 @@ def set_processing_failed(image_id: str, error_message: str = None) -> bool:
     return update_image_status(image_id, 'failed')
 
 
+def _convert_to_python_type(value):
+    """Convert numpy types to Python native types for database insertion"""
+    if value is None:
+        return None
+    try:
+        import numpy as np
+        # Handle numpy scalar types
+        if isinstance(value, np.generic):
+            return value.item()  # Convert numpy scalar to Python native type
+        if isinstance(value, (np.integer, np.floating)):
+            return float(value) if isinstance(value, np.floating) else int(value)
+        if isinstance(value, np.ndarray):
+            return value.tolist()
+    except (ImportError, AttributeError):
+        pass
+    # Ensure we return a Python native type
+    if isinstance(value, (int, float, str, bool, type(None))):
+        return value
+    # Last resort: try to convert
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return value
+
+
 def save_analysis(image_id: str, analysis_data: Dict) -> bool:
     """
     Save analysis results to database
@@ -218,24 +251,24 @@ def save_analysis(image_id: str, analysis_data: Dict) -> bool:
                         updated_at = CURRENT_TIMESTAMP
                 """, (
                     image_id,
-                    analysis_data.get('ndvi_mean'),
-                    analysis_data.get('ndvi_std'),
-                    analysis_data.get('ndvi_min'),
-                    analysis_data.get('ndvi_max'),
-                    analysis_data.get('savi_mean'),
-                    analysis_data.get('savi_std'),
-                    analysis_data.get('savi_min'),
-                    analysis_data.get('savi_max'),
-                    analysis_data.get('gndvi_mean'),
-                    analysis_data.get('gndvi_std'),
-                    analysis_data.get('gndvi_min'),
-                    analysis_data.get('gndvi_max'),
-                    analysis_data.get('health_score'),
+                    _convert_to_python_type(analysis_data.get('ndvi_mean')),
+                    _convert_to_python_type(analysis_data.get('ndvi_std')),
+                    _convert_to_python_type(analysis_data.get('ndvi_min')),
+                    _convert_to_python_type(analysis_data.get('ndvi_max')),
+                    _convert_to_python_type(analysis_data.get('savi_mean')),
+                    _convert_to_python_type(analysis_data.get('savi_std')),
+                    _convert_to_python_type(analysis_data.get('savi_min')),
+                    _convert_to_python_type(analysis_data.get('savi_max')),
+                    _convert_to_python_type(analysis_data.get('gndvi_mean')),
+                    _convert_to_python_type(analysis_data.get('gndvi_std')),
+                    _convert_to_python_type(analysis_data.get('gndvi_min')),
+                    _convert_to_python_type(analysis_data.get('gndvi_max')),
+                    _convert_to_python_type(analysis_data.get('health_score')),
                     analysis_data.get('health_status'),
                     analysis_data.get('summary'),
                     analysis_data.get('analysis_type', 'ndvi_savi_gndvi_onion'),
                     analysis_data.get('model_version'),
-                    analysis_data.get('confidence'),
+                    _convert_to_python_type(analysis_data.get('confidence')),
                     analysis_data.get('processed_image_path'),
                     analysis_data.get('processed_s3_url'),
                 ))
@@ -277,20 +310,20 @@ def save_analysis(image_id: str, analysis_data: Dict) -> bool:
                         updated_at = CURRENT_TIMESTAMP
                 """, (
                     image_id,
-                    analysis_data.get('ndvi_mean'),
-                    analysis_data.get('ndvi_std'),
-                    analysis_data.get('ndvi_min'),
-                    analysis_data.get('ndvi_max'),
-                    analysis_data.get('savi_mean'),
-                    analysis_data.get('savi_std'),
-                    analysis_data.get('savi_min'),
-                    analysis_data.get('savi_max'),
-                    analysis_data.get('health_score'),
+                    _convert_to_python_type(analysis_data.get('ndvi_mean')),
+                    _convert_to_python_type(analysis_data.get('ndvi_std')),
+                    _convert_to_python_type(analysis_data.get('ndvi_min')),
+                    _convert_to_python_type(analysis_data.get('ndvi_max')),
+                    _convert_to_python_type(analysis_data.get('savi_mean')),
+                    _convert_to_python_type(analysis_data.get('savi_std')),
+                    _convert_to_python_type(analysis_data.get('savi_min')),
+                    _convert_to_python_type(analysis_data.get('savi_max')),
+                    _convert_to_python_type(analysis_data.get('health_score')),
                     analysis_data.get('health_status'),
                     analysis_data.get('summary'),
                     analysis_data.get('analysis_type', 'ndvi_savi_gndvi_onion'),
                     analysis_data.get('model_version'),
-                    analysis_data.get('confidence'),
+                    _convert_to_python_type(analysis_data.get('confidence')),
                     analysis_data.get('processed_image_path'),
                     analysis_data.get('processed_s3_url'),
                 ))
