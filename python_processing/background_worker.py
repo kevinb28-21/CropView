@@ -125,8 +125,27 @@ def process_image(image_record: dict) -> bool:
             return False
         
         # Step 3: Perform analysis (includes NDVI, SAVI, GNDVI)
+        # Try to use TensorFlow model if available
+        model_path = os.getenv('ONION_MODEL_PATH', './models/onion_crop_health_model.h5')
+        use_tensorflow = os.path.exists(model_path) if model_path else False
+        
+        if use_tensorflow:
+            logger.info(f"Using TensorFlow model for analysis: {model_path}")
+        else:
+            logger.info(f"TensorFlow model not found, using vegetation index analysis only")
+        
         logger.info(f"Analyzing onion crop image: {image_path}")
-        analysis_result = analyze_crop_health(image_path, use_tensorflow=False)
+        analysis_result = analyze_crop_health(image_path, use_tensorflow=use_tensorflow, model_path=model_path if use_tensorflow else None)
+        
+        # Extract TensorFlow model results if available
+        tf_results = analysis_result.get('tensorflow', {})
+        if tf_results and tf_results.get('model_loaded'):
+            # Use TensorFlow classification if available
+            analysis_result['health_status'] = tf_results.get('classification', analysis_result.get('health_status'))
+            analysis_result['confidence'] = tf_results.get('confidence', 0.0)
+            analysis_result['model_version'] = os.path.basename(model_path) if model_path else None
+            analysis_result['analysis_type'] = 'tensorflow_onion_classification'
+            logger.info(f"TensorFlow classification: {tf_results.get('classification')} (confidence: {tf_results.get('confidence', 0):.2%})")
         
         # Ensure all vegetation indices are calculated
         # (analyze_crop_health should include all, but double-check)

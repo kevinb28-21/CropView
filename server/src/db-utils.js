@@ -74,18 +74,24 @@ export async function getAllImages(limit = 100) {
         i.original_name, 
         i.s3_url, 
         i.file_path,
-        i.uploaded_at, 
+        i.uploaded_at,
+        i.processed_at,
         i.processing_status,
         i.s3_stored,
         g.latitude, 
         g.longitude,
         g.altitude,
-        a.ndvi_mean, 
-        a.savi_mean, 
-        a.gndvi_mean,
+        a.ndvi_mean, a.ndvi_std, a.ndvi_min, a.ndvi_max,
+        a.savi_mean, a.savi_std, a.savi_min, a.savi_max,
+        a.gndvi_mean, a.gndvi_std, a.gndvi_min, a.gndvi_max,
+        a.health_score,
         a.health_status, 
         a.summary,
-        a.analysis_type
+        a.analysis_type,
+        a.model_version,
+        a.confidence,
+        a.processed_s3_url,
+        a.processed_image_path
       FROM images i
       LEFT JOIN image_gps g ON i.id = g.image_id
       LEFT JOIN analyses a ON i.id = a.image_id
@@ -101,19 +107,40 @@ export async function getAllImages(limit = 100) {
       s3Url: row.s3_url,
       s3Stored: row.s3_stored,
       createdAt: row.uploaded_at?.toISOString(),
-      processingStatus: row.processing_status,
+      processedAt: row.processed_at?.toISOString(),
+      processingStatus: row.processing_status || 'uploaded',
       gps: row.latitude && row.longitude ? {
         latitude: parseFloat(row.latitude),
         longitude: parseFloat(row.longitude),
         altitude: row.altitude ? parseFloat(row.altitude) : null
       } : null,
       analysis: row.ndvi_mean !== null ? {
-        ndvi: parseFloat(row.ndvi_mean),
-        savi: row.savi_mean ? parseFloat(row.savi_mean) : null,
-        gndvi: row.gndvi_mean ? parseFloat(row.gndvi_mean) : null,
+        ndvi: {
+          mean: parseFloat(row.ndvi_mean),
+          std: row.ndvi_std ? parseFloat(row.ndvi_std) : null,
+          min: row.ndvi_min ? parseFloat(row.ndvi_min) : null,
+          max: row.ndvi_max ? parseFloat(row.ndvi_max) : null
+        },
+        savi: row.savi_mean !== null ? {
+          mean: parseFloat(row.savi_mean),
+          std: row.savi_std ? parseFloat(row.savi_std) : null,
+          min: row.savi_min ? parseFloat(row.savi_min) : null,
+          max: row.savi_max ? parseFloat(row.savi_max) : null
+        } : null,
+        gndvi: row.gndvi_mean !== null ? {
+          mean: parseFloat(row.gndvi_mean),
+          std: row.gndvi_std ? parseFloat(row.gndvi_std) : null,
+          min: row.gndvi_min ? parseFloat(row.gndvi_min) : null,
+          max: row.gndvi_max ? parseFloat(row.gndvi_max) : null
+        } : null,
+        healthScore: row.health_score ? parseFloat(row.health_score) : null,
         healthStatus: row.health_status,
         summary: row.summary,
-        analysisType: row.analysis_type
+        analysisType: row.analysis_type,
+        modelVersion: row.model_version,
+        confidence: row.confidence ? parseFloat(row.confidence) : null,
+        processedImageUrl: row.processed_s3_url,
+        processedImagePath: row.processed_image_path
       } : null
     }));
   } catch (error) {
@@ -136,12 +163,17 @@ export async function getImageById(imageId) {
         g.latitude, 
         g.longitude, 
         g.altitude,
-        a.ndvi_mean, 
-        a.savi_mean, 
-        a.gndvi_mean,
+        a.ndvi_mean, a.ndvi_std, a.ndvi_min, a.ndvi_max,
+        a.savi_mean, a.savi_std, a.savi_min, a.savi_max,
+        a.gndvi_mean, a.gndvi_std, a.gndvi_min, a.gndvi_max,
+        a.health_score,
         a.health_status, 
         a.summary,
-        a.analysis_type
+        a.analysis_type,
+        a.model_version,
+        a.confidence,
+        a.processed_s3_url,
+        a.processed_image_path
       FROM images i
       LEFT JOIN image_gps g ON i.id = g.image_id
       LEFT JOIN analyses a ON i.id = a.image_id
@@ -162,19 +194,40 @@ export async function getImageById(imageId) {
       s3Key: row.s3_key,
       s3Stored: row.s3_stored,
       createdAt: row.uploaded_at?.toISOString(),
-      processingStatus: row.processing_status,
+      processedAt: row.processed_at?.toISOString(),
+      processingStatus: row.processing_status || 'uploaded',
       gps: row.latitude && row.longitude ? {
         latitude: parseFloat(row.latitude),
         longitude: parseFloat(row.longitude),
         altitude: row.altitude ? parseFloat(row.altitude) : null
       } : null,
       analysis: row.ndvi_mean !== null ? {
-        ndvi: parseFloat(row.ndvi_mean),
-        savi: row.savi_mean ? parseFloat(row.savi_mean) : null,
-        gndvi: row.gndvi_mean ? parseFloat(row.gndvi_mean) : null,
+        ndvi: {
+          mean: parseFloat(row.ndvi_mean),
+          std: row.ndvi_std ? parseFloat(row.ndvi_std) : null,
+          min: row.ndvi_min ? parseFloat(row.ndvi_min) : null,
+          max: row.ndvi_max ? parseFloat(row.ndvi_max) : null
+        },
+        savi: row.savi_mean !== null ? {
+          mean: parseFloat(row.savi_mean),
+          std: row.savi_std ? parseFloat(row.savi_std) : null,
+          min: row.savi_min ? parseFloat(row.savi_min) : null,
+          max: row.savi_max ? parseFloat(row.savi_max) : null
+        } : null,
+        gndvi: row.gndvi_mean !== null ? {
+          mean: parseFloat(row.gndvi_mean),
+          std: row.gndvi_std ? parseFloat(row.gndvi_std) : null,
+          min: row.gndvi_min ? parseFloat(row.gndvi_min) : null,
+          max: row.gndvi_max ? parseFloat(row.gndvi_max) : null
+        } : null,
+        healthScore: row.health_score ? parseFloat(row.health_score) : null,
         healthStatus: row.health_status,
         summary: row.summary,
-        analysisType: row.analysis_type
+        analysisType: row.analysis_type,
+        modelVersion: row.model_version,
+        confidence: row.confidence ? parseFloat(row.confidence) : null,
+        processedImageUrl: row.processed_s3_url,
+        processedImagePath: row.processed_image_path
       } : null
     };
   } catch (error) {
@@ -290,7 +343,7 @@ export async function getTelemetry() {
       lat: parseFloat(telemetryResult.rows[0].latitude),
       lng: parseFloat(telemetryResult.rows[0].longitude),
       altitude: telemetryResult.rows[0].altitude ? parseFloat(telemetryResult.rows[0].altitude) : null
-    } : { lat: 43.6532, lng: -79.3832 }; // Default Toronto
+    } : null;
     
     const route = routeResult.rows.map(row => ({
       lat: parseFloat(row.latitude),
@@ -306,25 +359,15 @@ export async function getTelemetry() {
     return {
       position,
       route,
-      geofence: geofence.length > 0 ? geofence : [
-        { lat: 43.6555, lng: -79.391 },
-        { lat: 43.6505, lng: -79.391 },
-        { lat: 43.6505, lng: -79.3755 },
-        { lat: 43.6555, lng: -79.3755 }
-      ] // Default geofence
+      geofence: geofence.length > 0 ? geofence : []
     };
   } catch (error) {
     console.error('Error fetching telemetry:', error);
-    // Return default telemetry on error
+    // Return empty telemetry on error (no mock data)
     return {
-      position: { lat: 43.6532, lng: -79.3832 },
+      position: null,
       route: [],
-      geofence: [
-        { lat: 43.6555, lng: -79.391 },
-        { lat: 43.6505, lng: -79.391 },
-        { lat: 43.6505, lng: -79.3755 },
-        { lat: 43.6555, lng: -79.3755 }
-      ]
+      geofence: []
     };
   }
 }

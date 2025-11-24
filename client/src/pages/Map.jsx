@@ -79,7 +79,7 @@ export default function MapPage() {
           </div>
         )}
         
-        <div className="map-wrapper">
+        <div className="map-wrapper" style={{ position: 'relative' }}>
           <DashboardMap 
             telemetry={telemetry} 
             drawMode={drawMode} 

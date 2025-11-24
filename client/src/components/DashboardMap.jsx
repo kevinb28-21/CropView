@@ -133,13 +133,28 @@ function RotationControl({ rotation, onRotationChange }) {
   }, [rotation]);
 
   useEffect(() => {
-    const container = map.getContainer();
-    if (container) {
-      container.style.transform = `rotate(${currentRotation}deg)`;
-      container.style.transition = 'transform 0.3s ease';
-      // Adjust transform origin to center of map
-      container.style.transformOrigin = 'center center';
+    // Rotate only the tile pane (the actual map tiles), not the entire container
+    // This keeps markers, polygons, and controls in their correct positions
+    const tilePane = map.getPane('tilePane');
+    if (tilePane) {
+      tilePane.style.transform = `rotate(${currentRotation}deg)`;
+      tilePane.style.transition = 'transform 0.3s ease';
+      // Rotate around the center of the map
+      tilePane.style.transformOrigin = '50% 50%';
     }
+    
+    // Update transform origin on map resize
+    const updateTransformOrigin = () => {
+      if (tilePane) {
+        tilePane.style.transformOrigin = '50% 50%';
+      }
+    };
+    
+    map.on('resize', updateTransformOrigin);
+    
+    return () => {
+      map.off('resize', updateTransformOrigin);
+    };
   }, [currentRotation, map]);
 
   const handleRotate = (delta) => {
@@ -149,19 +164,23 @@ function RotationControl({ rotation, onRotationChange }) {
   };
 
   return (
-    <div style={{
-      position: 'absolute',
-      top: '10px',
-      right: '10px',
-      zIndex: 1000,
-      background: 'white',
-      borderRadius: '4px',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-      padding: '8px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '4px'
-    }}>
+    <div 
+      className="leaflet-control"
+      style={{
+        position: 'absolute',
+        top: '10px',
+        right: '10px',
+        zIndex: 1000,
+        background: 'white',
+        borderRadius: '4px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        padding: '8px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        pointerEvents: 'auto'
+      }}
+    >
       <button
         onClick={() => handleRotate(-15)}
         style={{
@@ -170,8 +189,11 @@ function RotationControl({ rotation, onRotationChange }) {
           borderRadius: '4px',
           background: 'white',
           cursor: 'pointer',
-          fontSize: '14px'
+          fontSize: '14px',
+          transition: 'background 0.2s'
         }}
+        onMouseEnter={(e) => e.target.style.background = '#f0f0f0'}
+        onMouseLeave={(e) => e.target.style.background = 'white'}
         title="Rotate left 15°"
       >
         ↺ -15°
@@ -180,7 +202,8 @@ function RotationControl({ rotation, onRotationChange }) {
         textAlign: 'center',
         fontSize: '12px',
         padding: '4px',
-        color: '#666'
+        color: '#666',
+        fontWeight: 500
       }}>
         {currentRotation}°
       </div>
@@ -192,8 +215,11 @@ function RotationControl({ rotation, onRotationChange }) {
           borderRadius: '4px',
           background: 'white',
           cursor: 'pointer',
-          fontSize: '14px'
+          fontSize: '14px',
+          transition: 'background 0.2s'
         }}
+        onMouseEnter={(e) => e.target.style.background = '#f0f0f0'}
+        onMouseLeave={(e) => e.target.style.background = 'white'}
         title="Rotate right 15°"
       >
         ↻ +15°
@@ -210,8 +236,11 @@ function RotationControl({ rotation, onRotationChange }) {
           background: '#f0f0f0',
           cursor: 'pointer',
           fontSize: '11px',
-          marginTop: '4px'
+          marginTop: '4px',
+          transition: 'background 0.2s'
         }}
+        onMouseEnter={(e) => e.target.style.background = '#e0e0e0'}
+        onMouseLeave={(e) => e.target.style.background = '#f0f0f0'}
         title="Reset rotation"
       >
         Reset
@@ -229,6 +258,8 @@ export default function DashboardMap({
   onRotationChange 
 }) {
   const center = useMemo(() => {
+    // Use telemetry position if available, otherwise use a default center
+    // Note: TORONTO_CENTER is just a fallback - in production, use actual field location
     return telemetry?.position ? [telemetry.position.lat, telemetry.position.lng] : TORONTO_CENTER;
   }, [telemetry]);
 

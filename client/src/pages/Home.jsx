@@ -21,9 +21,32 @@ export default function HomePage() {
     return () => clearInterval(id);
   }, []);
 
-  const avgNDVI = images.length > 0
-    ? (images.reduce((sum, img) => sum + (img?.analysis?.ndvi || 0), 0) / images.length).toFixed(2)
+  const processedImages = images.filter(img => img.processingStatus === 'completed' && img.analysis);
+  const avgNDVI = processedImages.length > 0
+    ? (processedImages.reduce((sum, img) => sum + (img?.analysis?.ndvi?.mean || 0), 0) / processedImages.length).toFixed(3)
     : null;
+  const avgSAVI = processedImages.length > 0
+    ? (processedImages.reduce((sum, img) => sum + (img?.analysis?.savi?.mean || 0), 0) / processedImages.length).toFixed(3)
+    : null;
+  const avgGNDVI = processedImages.length > 0
+    ? (processedImages.reduce((sum, img) => sum + (img?.analysis?.gndvi?.mean || 0), 0) / processedImages.length).toFixed(3)
+    : null;
+  const avgHealthScore = processedImages.length > 0
+    ? (processedImages.reduce((sum, img) => sum + (img?.analysis?.healthScore || 0), 0) / processedImages.length).toFixed(2)
+    : null;
+  const avgConfidence = processedImages.filter(img => img.analysis?.confidence).length > 0
+    ? (processedImages
+        .filter(img => img.analysis?.confidence)
+        .reduce((sum, img) => sum + (img.analysis.confidence || 0), 0) / 
+       processedImages.filter(img => img.analysis?.confidence).length * 100).toFixed(1)
+    : null;
+  
+  // Count images processed today
+  const today = new Date().toDateString();
+  const imagesToday = images.filter(img => {
+    const imgDate = new Date(img.createdAt).toDateString();
+    return imgDate === today && img.processingStatus === 'completed';
+  }).length;
 
   return (
     <div className="container">
@@ -42,18 +65,44 @@ export default function HomePage() {
             <div className="metrics">
               <div className="metric">
                 <div className="metric-label">Images Analyzed</div>
-                <div className="metric-value">{images.length}</div>
+                <div className="metric-value">{processedImages.length}</div>
               </div>
+              {imagesToday > 0 && (
+                <div className="metric">
+                  <div className="metric-label">Processed Today</div>
+                  <div className="metric-value">{imagesToday}</div>
+                </div>
+              )}
               {avgNDVI && (
                 <div className="metric">
-                  <div className="metric-label">Average NDVI</div>
+                  <div className="metric-label">Avg NDVI</div>
                   <div className="metric-value">{avgNDVI}</div>
                 </div>
               )}
-              <div className="metric">
-                <div className="metric-label">System Status</div>
-                <div className="metric-value" style={{ fontSize: 16, color: '#059669' }}>✓ Active</div>
-              </div>
+              {avgSAVI && (
+                <div className="metric">
+                  <div className="metric-label">Avg SAVI</div>
+                  <div className="metric-value">{avgSAVI}</div>
+                </div>
+              )}
+              {avgGNDVI && (
+                <div className="metric">
+                  <div className="metric-label">Avg GNDVI</div>
+                  <div className="metric-value">{avgGNDVI}</div>
+                </div>
+              )}
+              {avgHealthScore && (
+                <div className="metric">
+                  <div className="metric-label">Avg Health Score</div>
+                  <div className="metric-value">{avgHealthScore}</div>
+                </div>
+              )}
+              {avgConfidence && (
+                <div className="metric">
+                  <div className="metric-label">ML Confidence</div>
+                  <div className="metric-value" style={{ fontSize: 18 }}>{avgConfidence}%</div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -105,9 +154,29 @@ export default function HomePage() {
                       </div>
                     </div>
                   </div>
-                  <span className="badge" style={{ fontSize: 11 }}>
-                    NDVI {img?.analysis?.ndvi?.toFixed(2)}
-                  </span>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {img.processingStatus && (
+                      <span style={{
+                        fontSize: 10,
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                        background: img.processingStatus === 'completed' ? '#d1fae5' :
+                                   img.processingStatus === 'processing' ? '#fef3c7' :
+                                   img.processingStatus === 'failed' ? '#fee2e2' : '#f3f4f6',
+                        color: img.processingStatus === 'completed' ? '#065f46' :
+                               img.processingStatus === 'processing' ? '#92400e' :
+                               img.processingStatus === 'failed' ? '#991b1b' : '#6b7280',
+                        fontWeight: 500
+                      }}>
+                        {img.processingStatus}
+                      </span>
+                    )}
+                    {img?.analysis?.ndvi?.mean !== undefined && (
+                      <span className="badge" style={{ fontSize: 11 }}>
+                        NDVI {img.analysis.ndvi.mean.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

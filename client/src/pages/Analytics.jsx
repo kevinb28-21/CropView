@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import UploadPanel from '../components/UploadPanel.jsx';
+import ProcessingStatus from '../components/ProcessingStatus.jsx';
+import VegetationIndexMaps from '../components/VegetationIndexMaps.jsx';
+import MLExplanation from '../components/MLExplanation.jsx';
 import { api } from '../utils/api.js';
 
 export default function AnalyticsPage() {
   const [images, setImages] = useState([]);
   const [selectedImageId, setSelectedImageId] = useState(null);
+  const [activeTab, setActiveTab] = useState('overview');
   const selectedImage = useMemo(() => images.find(i => i.id === selectedImageId) || images[0], [images, selectedImageId]);
 
   useEffect(() => {
@@ -20,6 +24,27 @@ export default function AnalyticsPage() {
     return () => { mounted = false; clearInterval(id); };
   }, []);
 
+  const exportAnalysis = (image) => {
+    if (!image || !image.analysis) return;
+    
+    const exportData = {
+      imageId: image.id,
+      filename: image.originalName || image.filename,
+      uploadedAt: image.createdAt,
+      processedAt: image.processedAt,
+      processingStatus: image.processingStatus,
+      analysis: image.analysis
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analysis_${image.id}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="container">
       <div className="container-grid">
@@ -34,7 +59,10 @@ export default function AnalyticsPage() {
                   className="list-item" 
                   key={img.id}
                   onClick={() => setSelectedImageId(img.id)}
-                  style={{ cursor: 'pointer' }}
+                  style={{ 
+                    cursor: 'pointer',
+                    border: selectedImageId === img.id ? '2px solid #3b82f6' : '1px solid #e5e7eb'
+                  }}
                 >
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
                     <img 
@@ -48,7 +76,6 @@ export default function AnalyticsPage() {
                         border: '1px solid #e5e7eb' 
                       }} 
                       onError={(e) => {
-                        // Fallback to path if S3 URL fails
                         if (img.s3Url && img.path) {
                           e.target.src = img.path;
                         }
@@ -61,11 +88,32 @@ export default function AnalyticsPage() {
                       <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
                         {new Date(img.createdAt).toLocaleString()}
                       </div>
+                      {img.processingStatus && (
+                        <div style={{ 
+                          fontSize: 10, 
+                          marginTop: 4,
+                          padding: '2px 6px',
+                          borderRadius: 4,
+                          display: 'inline-block',
+                          background: img.processingStatus === 'completed' ? '#d1fae5' :
+                                     img.processingStatus === 'processing' ? '#fef3c7' :
+                                     img.processingStatus === 'failed' ? '#fee2e2' : '#f3f4f6',
+                          color: img.processingStatus === 'completed' ? '#065f46' :
+                                 img.processingStatus === 'processing' ? '#92400e' :
+                                 img.processingStatus === 'failed' ? '#991b1b' : '#6b7280'
+                        }}>
+                          {img.processingStatus}
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <span className="badge">
-                    NDVI {img?.analysis?.ndvi?.toFixed(2) ?? '-'}
-                  </span>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {img?.analysis?.ndvi?.mean !== undefined && (
+                      <span className="badge">
+                        NDVI {img.analysis.ndvi.mean.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
               {images.length === 0 && (
@@ -80,69 +128,240 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="card">
-          <div className="section-title">Analysis Details</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div className="section-title">Analysis Details</div>
+            {selectedImage && selectedImage.analysis && (
+              <button
+                onClick={() => exportAnalysis(selectedImage)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  border: '1px solid #e5e7eb',
+                  background: 'white',
+                  color: '#374151',
+                  fontSize: 12,
+                  cursor: 'pointer'
+                }}
+              >
+                📥 Export JSON
+              </button>
+            )}
+          </div>
+
           {!selectedImage && (
             <div className="empty-state">
               <div className="empty-state-icon">📊</div>
               <div>Select an image to view analysis</div>
             </div>
           )}
+
           {selectedImage && (
             <>
-              <div className="metrics">
-                <div className="metric">
-                  <div className="metric-label">NDVI Value</div>
-                  <div className="metric-value">{selectedImage.analysis?.ndvi?.toFixed(2) ?? 'N/A'}</div>
-                </div>
-                <div className="metric">
-                  <div className="metric-label">Health Status</div>
-                  <div className="metric-value" style={{ fontSize: 18 }}>
-                    {selectedImage.analysis?.summary ?? 'N/A'}
-                  </div>
-                </div>
-              </div>
-              
-              {(selectedImage.s3Url || selectedImage.path) && (
-                <div style={{ marginBottom: 20 }}>
-                  <img 
-                    src={selectedImage.s3Url || selectedImage.path} 
-                    alt={selectedImage.originalName}
-                    style={{ 
-                      width: '100%', 
-                      borderRadius: 8, 
-                      border: '1px solid #e5e7eb',
-                      marginBottom: 16
-                    }} 
-                    onError={(e) => {
-                      // Fallback to path if S3 URL fails
-                      if (selectedImage.s3Url && selectedImage.path) {
-                        e.target.src = selectedImage.path;
-                      }
+              {/* Processing Status */}
+              <ProcessingStatus
+                status={selectedImage.processingStatus}
+                uploadedAt={selectedImage.createdAt}
+                processedAt={selectedImage.processedAt}
+              />
+
+              {/* Tabs */}
+              <div style={{ 
+                display: 'flex', 
+                gap: 8, 
+                marginBottom: 20,
+                borderBottom: '1px solid #e5e7eb'
+              }}>
+                {['overview', 'indices', 'ml', 'details'].map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    style={{
+                      padding: '10px 16px',
+                      border: 'none',
+                      borderBottom: `2px solid ${activeTab === tab ? '#3b82f6' : 'transparent'}`,
+                      background: 'transparent',
+                      color: activeTab === tab ? '#3b82f6' : '#6b7280',
+                      fontWeight: activeTab === tab ? 600 : 400,
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      textTransform: 'capitalize'
                     }}
-                  />
+                  >
+                    {tab === 'indices' ? 'Vegetation Indices' : 
+                     tab === 'ml' ? 'ML Analysis' : tab}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab Content */}
+              {activeTab === 'overview' && (
+                <div>
+                  {selectedImage.analysis ? (
+                    <>
+                      <div className="metrics" style={{ marginBottom: 20 }}>
+                        {selectedImage.analysis.ndvi?.mean !== undefined && (
+                          <div className="metric">
+                            <div className="metric-label">NDVI</div>
+                            <div className="metric-value">
+                              {selectedImage.analysis.ndvi.mean.toFixed(3)}
+                            </div>
+                          </div>
+                        )}
+                        {selectedImage.analysis.savi?.mean !== undefined && (
+                          <div className="metric">
+                            <div className="metric-label">SAVI</div>
+                            <div className="metric-value">
+                              {selectedImage.analysis.savi.mean.toFixed(3)}
+                            </div>
+                          </div>
+                        )}
+                        {selectedImage.analysis.gndvi?.mean !== undefined && (
+                          <div className="metric">
+                            <div className="metric-label">GNDVI</div>
+                            <div className="metric-value">
+                              {selectedImage.analysis.gndvi.mean.toFixed(3)}
+                            </div>
+                          </div>
+                        )}
+                        {selectedImage.analysis.healthStatus && (
+                          <div className="metric">
+                            <div className="metric-label">Health Status</div>
+                            <div className="metric-value" style={{ fontSize: 16, textTransform: 'capitalize' }}>
+                              {selectedImage.analysis.healthStatus.replace('_', ' ')}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {(selectedImage.s3Url || selectedImage.path) && (
+                        <div style={{ marginBottom: 20 }}>
+                          <img 
+                            src={selectedImage.s3Url || selectedImage.path} 
+                            alt={selectedImage.originalName}
+                            style={{ 
+                              width: '100%', 
+                              borderRadius: 8, 
+                              border: '1px solid #e5e7eb'
+                            }} 
+                            onError={(e) => {
+                              if (selectedImage.s3Url && selectedImage.path) {
+                                e.target.src = selectedImage.path;
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {selectedImage.analysis.summary && (
+                        <div style={{
+                          padding: 16,
+                          background: '#f9fafb',
+                          borderRadius: 8,
+                          border: '1px solid #e5e7eb'
+                        }}>
+                          <div style={{ fontWeight: 600, marginBottom: 8, color: '#111827' }}>
+                            Summary
+                          </div>
+                          <div style={{ color: '#374151', lineHeight: 1.6 }}>
+                            {selectedImage.analysis.summary}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ padding: 20, textAlign: 'center', color: '#6b7280' }}>
+                      Analysis not yet available. Processing...
+                    </div>
+                  )}
                 </div>
               )}
-              
-              <div className="section-title" style={{ marginTop: 24 }}>Stress Zones Visualization</div>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
-                10×10 grid showing stress zones (red indicates higher stress)
-              </div>
-              <div className="grid">
-                {Array.from({ length: 100 }).map((_, idx) => {
-                  const x = idx % 10;
-                  const y = Math.floor(idx / 10);
-                  const zone = selectedImage.analysis?.stressZones?.find(z => z.x === x && z.y === y);
-                  const color = zone ? `rgba(220,38,38,${zone.severity})` : '#f3f4f6';
-                  return (
-                    <div 
-                      key={idx} 
-                      className="grid-cell" 
-                      style={{ background: color }}
-                      title={zone ? `Stress: ${(zone.severity * 100).toFixed(0)}%` : 'No stress'}
+
+              {activeTab === 'indices' && selectedImage.analysis && (
+                <div>
+                  {(selectedImage.s3Url || selectedImage.path) && (
+                    <VegetationIndexMaps
+                      imageUrl={selectedImage.s3Url || selectedImage.path}
+                      analysis={selectedImage.analysis}
                     />
-                  );
-                })}
-              </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'ml' && (
+                <div>
+                  {selectedImage.analysis ? (
+                    <MLExplanation
+                      analysis={selectedImage.analysis}
+                      image={selectedImage}
+                    />
+                  ) : (
+                    <div style={{ padding: 20, textAlign: 'center', color: '#6b7280' }}>
+                      ML analysis not available. Train a model to enable ML-based classification.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'details' && (
+                <div>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 8, color: '#111827' }}>
+                      Processing Information
+                    </div>
+                    <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.8 }}>
+                      <div>Status: <strong>{selectedImage.processingStatus || 'uploaded'}</strong></div>
+                      {selectedImage.createdAt && (
+                        <div>Uploaded: {new Date(selectedImage.createdAt).toLocaleString()}</div>
+                      )}
+                      {selectedImage.processedAt && (
+                        <div>Processed: {new Date(selectedImage.processedAt).toLocaleString()}</div>
+                      )}
+                      {selectedImage.analysis?.analysisType && (
+                        <div>Analysis Type: {selectedImage.analysis.analysisType}</div>
+                      )}
+                      {selectedImage.analysis?.modelVersion && (
+                        <div>Model Version: {selectedImage.analysis.modelVersion}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {selectedImage.analysis && (
+                    <div>
+                      <div style={{ fontWeight: 600, marginBottom: 8, color: '#111827' }}>
+                        Full Analysis Data
+                      </div>
+                      <pre style={{
+                        padding: 16,
+                        background: '#1f2937',
+                        color: '#f9fafb',
+                        borderRadius: 8,
+                        fontSize: 11,
+                        overflow: 'auto',
+                        maxHeight: '400px'
+                      }}>
+                        {JSON.stringify(selectedImage.analysis, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+
+                  {selectedImage.analysis?.processedImageUrl && (
+                    <div style={{ marginTop: 20 }}>
+                      <div style={{ fontWeight: 600, marginBottom: 8, color: '#111827' }}>
+                        Processed Image
+                      </div>
+                      <img
+                        src={selectedImage.analysis.processedImageUrl}
+                        alt="Processed"
+                        style={{
+                          width: '100%',
+                          borderRadius: 8,
+                          border: '1px solid #e5e7eb'
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>

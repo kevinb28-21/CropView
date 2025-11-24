@@ -403,19 +403,83 @@ def analyze_crop_health(image_path: str, use_tensorflow: bool = False,
     
     # TensorFlow classification (if enabled)
     tf_results = {}
+    health_status = None
+    health_score = None
+    summary = None
+    confidence = None
+    model_version = None
+    
     if use_tensorflow:
         tf_results = classify_crop_health_tensorflow(processed_path, model_path)
+        if tf_results.get('model_loaded') and tf_results.get('classification'):
+            # Use TensorFlow classification
+            health_status = tf_results.get('classification')
+            confidence = tf_results.get('confidence', 0.0)
+            model_version = os.path.basename(model_path) if model_path else 'tensorflow_model'
+            
+            # Generate summary based on classification
+            status_descriptions = {
+                'very_healthy': 'Excellent crop health with high vegetation vigor',
+                'healthy': 'Good crop health with adequate vegetation',
+                'moderate': 'Moderate crop health requiring monitoring',
+                'poor': 'Poor crop health requiring attention',
+                'very_poor': 'Critical crop health requiring immediate intervention',
+                'diseased': 'Signs of disease detected - treatment recommended',
+                'stressed': 'Crop stress detected - review environmental conditions',
+                'weeds': 'Significant weed presence affecting crop health'
+            }
+            summary = status_descriptions.get(health_status, f'Crop health: {health_status}')
+            
+            # Calculate health score from confidence and status
+            base_scores = {
+                'very_healthy': 0.9,
+                'healthy': 0.75,
+                'moderate': 0.5,
+                'poor': 0.3,
+                'very_poor': 0.1,
+                'diseased': 0.2,
+                'stressed': 0.4,
+                'weeds': 0.35
+            }
+            health_score = base_scores.get(health_status, 0.5) * confidence
+    
+    # Fallback to NDVI-based classification if TensorFlow not used
+    if not health_status:
+        mean_ndvi = ndvi_results.get('ndvi_mean', 0)
+        if mean_ndvi < 0.2:
+            health_status = "Very Poor"
+            summary = "Critical attention needed"
+        elif mean_ndvi < 0.4:
+            health_status = "Poor"
+            summary = "Attention needed"
+        elif mean_ndvi < 0.6:
+            health_status = "Moderate"
+            summary = "Moderate health"
+        elif mean_ndvi < 0.8:
+            health_status = "Healthy"
+            summary = "Healthy"
+        else:
+            health_status = "Very Healthy"
+            summary = "Very healthy"
+        
+        # Calculate health score from NDVI
+        health_score = min(1.0, max(0.0, (mean_ndvi + 0.2) / 1.0))
     
     # Combine results
     analysis = {
         **ndvi_results,
         **savi_results,
         **gndvi_results,
+        'health_status': health_status,
+        'health_score': health_score,
+        'summary': summary,
         'tensorflow': tf_results if use_tensorflow else None,
+        'confidence': confidence,
+        'model_version': model_version,
         'processed_image_path': processed_path,
         'original_image_path': image_path,
         'crop_type': 'onion',
-        'analysis_type': 'ndvi_savi_gndvi_onion'
+        'analysis_type': 'tensorflow_onion_classification' if use_tensorflow and tf_results.get('model_loaded') else 'ndvi_savi_gndvi_onion'
     }
     
     return analysis
