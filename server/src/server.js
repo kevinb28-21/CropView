@@ -99,10 +99,13 @@ let dbConnected = false;
 // Routes
 app.get('/api/health', async (req, res) => {
   const dbStatus = await testConnection();
+  const { hasGndviColumns } = await import('./db-utils.js');
+  const hasGndvi = await hasGndviColumns();
   res.json({ 
     status: 'ok',
     database: dbStatus ? 'connected' : 'disconnected',
-    service: 'nodejs-backend'
+    service: 'nodejs-backend',
+    gndviColumns: hasGndvi
   });
 });
 

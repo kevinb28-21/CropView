@@ -85,13 +85,32 @@ let gndviColumnsExist = null;
 
 /**
  * Check if GNDVI columns exist (with caching)
+ * @param {boolean} forceRefresh - Force refresh of cache
  * @returns {Promise<boolean>}
  */
-async function hasGndviColumns() {
-  if (gndviColumnsExist === null) {
-    gndviColumnsExist = await columnExists('analyses', 'gndvi_mean');
+export async function hasGndviColumns(forceRefresh = false) {
+  if (gndviColumnsExist === null || forceRefresh) {
+    try {
+      gndviColumnsExist = await columnExists('analyses', 'gndvi_mean');
+      if (gndviColumnsExist) {
+        console.log('✓ GNDVI columns detected in database');
+      } else {
+        console.warn('⚠️  GNDVI columns not found - run migration: python_processing/database_migration_add_gndvi.sql');
+      }
+    } catch (error) {
+      console.error('Error checking for GNDVI columns:', error);
+      gndviColumnsExist = false;
+    }
   }
   return gndviColumnsExist;
+}
+
+/**
+ * Reset the GNDVI column cache (useful after running migration)
+ */
+export function resetGndviColumnCache() {
+  gndviColumnsExist = null;
+  console.log('GNDVI column cache reset');
 }
 
 /**

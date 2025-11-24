@@ -13,8 +13,9 @@ if [ ! -f "$KEY_FILE" ]; then
     exit 1
 fi
 
-echo "Transferring migration script to EC2..."
+echo "Transferring migration script and SQL file to EC2..."
 scp -i "$KEY_FILE" deploy/run-migration.sh "$EC2_HOST:~/run-migration.sh"
+scp -i "$KEY_FILE" python_processing/database_migration_add_gndvi.sql "$EC2_HOST:~/Capstone_Interface/python_processing/database_migration_add_gndvi.sql"
 
 echo "Running migration on EC2..."
 ssh -i "$KEY_FILE" "$EC2_HOST" "chmod +x ~/run-migration.sh && ~/run-migration.sh"
