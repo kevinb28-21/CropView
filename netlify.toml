@@ -1,8 +1,9 @@
+# Netlify configuration for root directory
+# This tells Netlify to build from the client subdirectory
 [build]
   base = "client"
   command = "npm install && npm run build"
-  publish = "client/dist"
-  functions = "netlify/functions"
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
