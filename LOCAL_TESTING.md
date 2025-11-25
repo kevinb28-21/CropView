@@ -25,10 +25,11 @@ See "Manual Setup" section below.
    brew services start postgresql@14
    ```
 
-2. **Database** must exist:
+2. **Database credentials** must be set:
    ```bash
+   export DB_PASSWORD="<your_postgres_password>"
    # Check connection
-   PGPASSWORD=aum28 psql -U drone_user -d drone_analytics -c "SELECT 1;"
+   PGPASSWORD="$DB_PASSWORD" psql -U drone_user -d drone_analytics -c "SELECT 1;"
    ```
 
 ## Starting Services Manually
@@ -124,7 +125,7 @@ INFO - ✓ Successfully processed image <id>
 
 **In Database:**
 ```bash
-PGPASSWORD=aum28 psql -U drone_user -d drone_analytics -c "
+PGPASSWORD="$DB_PASSWORD" psql -U drone_user -d drone_analytics -c "
 SELECT 
     filename, 
     processing_status,
@@ -138,7 +139,7 @@ LIMIT 5;
 
 **View Analysis Results:**
 ```bash
-PGPASSWORD=aum28 psql -U drone_user -d drone_analytics -c "
+PGPASSWORD="$DB_PASSWORD" psql -U drone_user -d drone_analytics -c "
 SELECT 
     i.filename,
     a.ndvi_mean,
@@ -171,7 +172,7 @@ python3 -c "from db_utils import test_connection; print('OK' if test_connection(
 
 **Check for pending images:**
 ```bash
-PGPASSWORD=aum28 psql -U drone_user -d drone_analytics -c "
+PGPASSWORD="$DB_PASSWORD" psql -U drone_user -d drone_analytics -c "
 SELECT COUNT(*) FROM images WHERE processing_status = 'uploaded';
 "
 ```
@@ -185,7 +186,7 @@ ls -la server/uploads/
 
 **Fix database paths:**
 ```bash
-PGPASSWORD=aum28 psql -U drone_user -d drone_analytics -c "
+PGPASSWORD="$DB_PASSWORD" psql -U drone_user -d drone_analytics -c "
 UPDATE images 
 SET file_path = '/Users/kevinbhatt/Desktop/Projects/Capstone_Interface/server/uploads/' || filename,
     s3_stored = false 
@@ -277,7 +278,7 @@ ps aux | grep vite
 
 ### Reset Failed Images
 ```bash
-PGPASSWORD=aum28 psql -U drone_user -d drone_analytics -c "
+PGPASSWORD="$DB_PASSWORD" psql -U drone_user -d drone_analytics -c "
 UPDATE images 
 SET processing_status = 'uploaded' 
 WHERE processing_status = 'failed';
@@ -286,7 +287,7 @@ WHERE processing_status = 'failed';
 
 ### Clear All Images (Testing)
 ```bash
-PGPASSWORD=aum28 psql -U drone_user -d drone_analytics -c "
+PGPASSWORD="$DB_PASSWORD" psql -U drone_user -d drone_analytics -c "
 DELETE FROM analyses;
 DELETE FROM images;
 "

@@ -30,6 +30,26 @@ print_info() {
     echo -e "${BLUE}[i]${NC} $1"
 }
 
+# Resolve DB password from environment or .env files
+resolve_db_password() {
+    if [ -n "$DB_PASSWORD" ]; then
+        return
+    fi
+
+    if [ -f "server/.env" ]; then
+        DB_PASSWORD=$(grep "^DB_PASSWORD=" server/.env | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    fi
+
+    if [ -z "$DB_PASSWORD" ] && [ -f "python_processing/.env" ]; then
+        DB_PASSWORD=$(grep "^DB_PASSWORD=" python_processing/.env | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    fi
+
+    if [ -z "$DB_PASSWORD" ]; then
+        read -s -p "Enter PostgreSQL password for user 'drone_user': " DB_PASSWORD
+        echo ""
+    fi
+}
+
 echo "=========================================="
 echo "Starting Local Development Environment"
 echo "=========================================="
@@ -37,7 +57,8 @@ echo ""
 
 # Step 1: Check PostgreSQL
 print_info "Step 1: Checking PostgreSQL..."
-if PGPASSWORD=aum28 psql -U drone_user -d drone_analytics -c "SELECT 1;" > /dev/null 2>&1; then
+resolve_db_password
+if PGPASSWORD="$DB_PASSWORD" psql -U drone_user -d drone_analytics -c "SELECT 1;" > /dev/null 2>&1; then
     print_status "PostgreSQL is running"
 else
     print_error "PostgreSQL connection failed!"
@@ -51,7 +72,7 @@ if [ -f "python_processing/.env" ]; then
     print_status "python_processing/.env exists"
 else
     print_warning "python_processing/.env not found - creating..."
-    cat > python_processing/.env << 'EOF'
+    cat > python_processing/.env << EOF
 # Python Flask API Environment Variables
 FLASK_PORT=5001
 FLASK_DEBUG=False
@@ -61,7 +82,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=drone_analytics
 DB_USER=drone_user
-DB_PASSWORD=aum28
+DB_PASSWORD=${DB_PASSWORD:-changeme}
 
 # File Paths
 UPLOAD_FOLDER=./uploads
@@ -88,7 +109,7 @@ if [ -f "server/.env" ]; then
     print_status "server/.env exists"
 else
     print_warning "server/.env not found - creating..."
-    cat > server/.env << 'EOF'
+    cat > server/.env << EOF
 # Local Development Environment Variables
 PORT=5050
 NODE_ENV=development
@@ -101,7 +122,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=drone_analytics
 DB_USER=drone_user
-DB_PASSWORD=aum28
+DB_PASSWORD=${DB_PASSWORD:-changeme}
 
 # AWS S3 Configuration (optional for local dev)
 AWS_ACCESS_KEY_ID=
