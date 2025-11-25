@@ -1,9 +1,10 @@
 # Netlify configuration for root directory
-# This tells Netlify to build from the client subdirectory
+# When base = "client", Netlify changes to client/ directory first
+# So publish path should be relative to repo root, not base directory
 [build]
   base = "client"
   command = "npm install && npm run build"
-  publish = "dist"
+  publish = "client/dist"
 
 [build.environment]
   NODE_VERSION = "20"
@@ -43,4 +44,3 @@
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-
