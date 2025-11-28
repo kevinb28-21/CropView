@@ -30,6 +30,23 @@ This script will:
 2. **File Not Found Errors**: Fixed by correcting upload directory paths
 3. **Database Connection Errors**: Fixed by ensuring `.env` file exists with correct credentials
 
+### Fix 502 Bad Gateway Error
+
+If you're getting a 502 Bad Gateway error, it means nginx can't connect to the Node.js backend:
+
+**SSH into EC2 and run:**
+```bash
+cd ~/Capstone_Interface
+bash deploy/fix-502-bad-gateway.sh
+```
+
+Or run diagnostic first:
+```bash
+bash deploy/diagnose-502.sh
+```
+
+See [QUICK_FIX_502.md](./QUICK_FIX_502.md) for quick instructions or [FIX_502_INSTRUCTIONS.md](./FIX_502_INSTRUCTIONS.md) for detailed troubleshooting.
+
 This directory contains automated deployment scripts for setting up the Drone Crop Health Platform on AWS EC2.
 
 ## Quick Start
@@ -81,6 +98,9 @@ pm2 status
 
 - `ec2-setup.sh` - Main setup script
 - `nginx.conf` - Nginx configuration
+- `fix-502-bad-gateway.sh` - **Fix 502 Bad Gateway error** (automated fix)
+- `diagnose-502.sh` - Quick diagnostic for 502 errors
+- `fix-ec2-processing.sh` - Fix image processing issues
 - `env-templates/` - Environment variable templates
 
 ## Manual Steps Required
