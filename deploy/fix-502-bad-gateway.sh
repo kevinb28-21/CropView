@@ -35,22 +35,58 @@ if ! command -v pm2 &> /dev/null; then
     sudo npm install -g pm2
 fi
 
+# Check for .env file first
+if [ ! -f ~/Capstone_Interface/server/.env ]; then
+    print_error ".env file not found!"
+    echo "Creating .env template..."
+    cat > ~/Capstone_Interface/server/.env << 'EOF'
+PORT=5050
+NODE_ENV=production
+ORIGIN=http://localhost:5173,http://localhost:5182
+
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=drone_analytics
+DB_USER=drone_user
+DB_PASSWORD=changeme
+
+# AWS S3 (optional)
+# AWS_ACCESS_KEY_ID=
+# AWS_SECRET_ACCESS_KEY=
+# AWS_REGION=us-east-2
+# S3_BUCKET_NAME=
+EOF
+    print_warning "Created .env template. Please edit it with your actual values:"
+    echo "  nano ~/Capstone_Interface/server/.env"
+fi
+
 PM2_STATUS=$(pm2 list 2>/dev/null | grep -c "drone-backend" || echo "0")
 if [ "$PM2_STATUS" -eq 0 ]; then
     print_warning "Backend process not found in PM2"
     echo "Checking if we need to start it..."
     
-    if [ -f ~/Capstone_Interface/server/ecosystem.config.js ]; then
-        echo "Starting backend with PM2..."
+    # Try .cjs first (CommonJS - more reliable), then .js
+    if [ -f ~/Capstone_Interface/server/ecosystem.config.cjs ]; then
+        echo "Starting backend with PM2 (using .cjs config)..."
         cd ~/Capstone_Interface/server
+        pm2 delete drone-backend 2>/dev/null || true
+        pm2 start ecosystem.config.cjs
+        pm2 save
+        print_status "Backend started with PM2 (ecosystem.config.cjs)"
+    elif [ -f ~/Capstone_Interface/server/ecosystem.config.js ]; then
+        echo "Starting backend with PM2 (using .js config)..."
+        cd ~/Capstone_Interface/server
+        pm2 delete drone-backend 2>/dev/null || true
         pm2 start ecosystem.config.js
         pm2 save
-        print_status "Backend started with PM2"
+        print_status "Backend started with PM2 (ecosystem.config.js)"
     else
-        print_error "ecosystem.config.js not found!"
-        echo "Creating ecosystem.config.js..."
-        cat > ~/Capstone_Interface/server/ecosystem.config.js << 'EOF'
-export default {
+        print_error "ecosystem.config.js or .cjs not found!"
+        echo "Creating ecosystem.config.cjs (CommonJS format)..."
+        mkdir -p ~/Capstone_Interface/server/logs
+        cat > ~/Capstone_Interface/server/ecosystem.config.cjs << 'EOF'
+module.exports = {
   apps: [{
     name: 'drone-backend',
     script: 'src/server.js',
@@ -72,15 +108,23 @@ export default {
 };
 EOF
         cd ~/Capstone_Interface/server
-        pm2 start ecosystem.config.js
+        pm2 start ecosystem.config.cjs
         pm2 save
         print_status "Created and started backend"
     fi
 else
     print_status "Backend process found in PM2"
-    echo "Restarting backend..."
-    pm2 restart drone-backend
-    sleep 2
+    echo "Checking status..."
+    PM2_STATE=$(pm2 jlist 2>/dev/null | grep -o '"pm2_env":{"status":"[^"]*"' | grep -o 'status":"[^"]*' | cut -d'"' -f3 || echo "unknown")
+    if [ "$PM2_STATE" != "online" ]; then
+        print_warning "Backend status: $PM2_STATE (not online)"
+        echo "Restarting backend..."
+        pm2 restart drone-backend
+    else
+        print_status "Backend is online, restarting to ensure clean state..."
+        pm2 restart drone-backend
+    fi
+    sleep 3
 fi
 
 # Step 2: Check if port 5050 is listening
@@ -107,8 +151,33 @@ if [ "$HEALTH_RESPONSE" = "200" ]; then
     curl -s http://localhost:5050/api/health | head -3
 else
     print_error "Backend health check failed (HTTP $HEALTH_RESPONSE)"
+    echo ""
     echo "Recent backend logs:"
     pm2 logs drone-backend --lines 30 --nostream
+    echo ""
+    print_warning "Attempting to diagnose the issue..."
+    
+    # Check if backend can start manually
+    cd ~/Capstone_Interface/server
+    if [ -f src/server.js ]; then
+        echo "Testing if backend can start manually (5 second timeout)..."
+        timeout 5 node src/server.js 2>&1 | head -20 || echo "Backend failed to start - check errors above"
+    fi
+    
+    # Check database connection
+    echo ""
+    echo "Checking database connection..."
+    if command -v psql &> /dev/null; then
+        if [ -f .env ]; then
+            source .env 2>/dev/null || true
+            if psql -U "${DB_USER:-drone_user}" -d "${DB_NAME:-drone_analytics}" -h "${DB_HOST:-localhost}" -c "SELECT 1;" 2>/dev/null; then
+                print_status "Database connection successful"
+            else
+                print_error "Database connection failed!"
+                echo "Check your .env file database credentials"
+            fi
+        fi
+    fi
 fi
 
 # Step 4: Check nginx configuration

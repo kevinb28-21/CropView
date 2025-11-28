@@ -1,4 +1,6 @@
-export default {
+// PM2 ecosystem config - Use CommonJS format for better compatibility
+// PM2 prefers .cjs format, but this works too with proper extension
+module.exports = {
   apps: [{
     name: 'drone-backend',
     script: 'src/server.js',
