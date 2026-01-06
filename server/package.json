@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "dev:enhanced": "nodemon src/server-enhanced.js",
+    "start": "node src/server.js",
+    "start:enhanced": "node src/server-enhanced.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.927.0",

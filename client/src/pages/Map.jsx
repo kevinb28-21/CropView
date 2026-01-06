@@ -9,59 +9,30 @@ export default function MapPage() {
   const [rotation, setRotation] = useState(0);
 
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.jsx:11',message:'useEffect mounted',data:{hidden:document.hidden},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-    
     let mounted = true;
     let intervalId = null;
     let isFetching = false;
     
     const fetchTel = async () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.jsx:15',message:'fetchTel called',data:{hidden:document.hidden,mounted,isFetching},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      
-      // Skip if tab is hidden, already fetching, or unmounted
-      if (document.hidden || isFetching || !mounted) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.jsx:19',message:'fetchTel skipped',data:{hidden:document.hidden,isFetching,mounted},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        return;
-      }
+      if (document.hidden || isFetching || !mounted) return;
       
       isFetching = true;
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.jsx:23',message:'fetchTel starting API call',data:{mounted},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      
       try {
         const tel = await api.get('/api/telemetry').catch((e) => {
           console.error('Failed to fetch telemetry:', e);
           return null;
         });
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.jsx:38',message:'Telemetry response received',data:{hasTelemetry:!!tel,telemetryKeys:tel?Object.keys(tel):[],hasPosition:!!tel?.position,hasRoute:Array.isArray(tel?.route),hasGeofence:Array.isArray(tel?.geofence),routeLength:tel?.route?.length||0,geofenceLength:tel?.geofence?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'website-fix',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
         const telemetryData = tel || { position: null, route: [], geofence: [] };
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.jsx:44',message:'Setting telemetry',data:{hasPosition:!!telemetryData.position,routeLength:telemetryData.route?.length||0,geofenceLength:telemetryData.geofence?.length||0,mounted},timestamp:Date.now(),sessionId:'debug-session',runId:'website-fix',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
         if (mounted) setTelemetry(telemetryData);
       } catch (e) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.jsx:32',message:'fetchTel error',data:{error:e?.message||'unknown',mounted},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
         console.error('Error fetching telemetry:', e);
       } finally {
         isFetching = false;
       }
     };
     
-    // Initial fetch
     fetchTel();
     
-    // Poll every 30 seconds (reduced from 3 seconds to save Netlify bandwidth)
     const startPolling = () => {
       if (!document.hidden && !intervalId && mounted) {
         intervalId = setInterval(() => {
@@ -69,37 +40,23 @@ export default function MapPage() {
             fetchTel();
           }
         }, 30000);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.jsx:47',message:'interval created',data:{intervalId,intervalMs:30000},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
       }
     };
     
     const stopPolling = () => {
       if (intervalId) {
         clearInterval(intervalId);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.jsx:55',message:'interval cleared',data:{intervalId},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         intervalId = null;
       }
     };
     
-    // Start polling if tab is visible
     startPolling();
     
-    // Refresh immediately when tab becomes visible, and manage polling
     const handleVisibilityChange = () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.jsx:63',message:'visibility change',data:{hidden:document.hidden},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       if (document.hidden) {
         stopPolling();
       } else {
         startPolling();
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.jsx:69',message:'visibility change - calling fetchTel',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         fetchTel();
       }
     };
@@ -107,9 +64,6 @@ export default function MapPage() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => { 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Map.jsx:77',message:'useEffect cleanup',data:{intervalId},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
       mounted = false; 
       stopPolling();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -117,62 +71,148 @@ export default function MapPage() {
   }, []);
 
   return (
-    <div className="container">
-      <div className="card" style={{ gridColumn: '1 / -1' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+    <div className="container animate-fade-in">
+      <div className="card card-elevated" style={{ gridColumn: '1 / -1' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          marginBottom: 'var(--space-6)', 
+          flexWrap: 'wrap', 
+          gap: 'var(--space-4)'
+        }}>
           <div>
-            <div className="section-title" style={{ marginBottom: 4 }}>Drone Telemetry Map</div>
-            <div style={{ fontSize: 13, color: '#6b7280' }}>
+            <h2 className="section-title" style={{ marginBottom: 'var(--space-2)' }}>
+              Drone Telemetry Map
+            </h2>
+            <p style={{ 
+              fontSize: 'var(--font-size-sm)', 
+              color: 'var(--color-text-tertiary)',
+              margin: 0
+            }}>
               View drone location, route, and geofenced areas
-            </div>
+            </p>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ 
+            display: 'flex', 
+            gap: 'var(--space-3)', 
+            flexWrap: 'wrap',
+            alignItems: 'center'
+          }}>
             <button 
               onClick={() => setDrawMode(v => !v)} 
+              className={`btn ${drawMode ? 'btn-primary' : 'btn-secondary'}`}
               style={{ 
-                background: drawMode ? '#059669' : '#4cdf20',
-                color: '#152111'
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                minWidth: '160px',
+                justifyContent: 'center'
               }}
             >
-              {drawMode ? '✓ Drawing Mode' : 'Draw Geofence'}
+              {drawMode ? (
+                <>
+                  <span>✓</span>
+                  <span>Drawing Mode</span>
+                </>
+              ) : (
+                <>
+                  <span>✏️</span>
+                  <span>Draw Geofence</span>
+                </>
+              )}
             </button>
-            <button 
-              onClick={() => setDraftGeofence([])} 
-              disabled={draftGeofence.length === 0}
-              style={{ background: '#6b7280' }}
-            >
-              Reset
-            </button>
-            <button
-              onClick={async () => {
-                if (draftGeofence.length < 3) return;
-                await api.post('/api/telemetry', { geofence: draftGeofence });
-                const tel = await api.get('/api/telemetry');
-                setTelemetry(tel);
-                setDrawMode(false);
-                setDraftGeofence([]);
-              }}
-              disabled={draftGeofence.length < 3}
-              style={{ background: '#2563eb', color: 'white' }}
-            >
-              Save Geofence
-            </button>
+            
+            {draftGeofence.length > 0 && (
+              <>
+                <button 
+                  onClick={() => {
+                    setDraftGeofence([]);
+                    setDrawMode(false);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-2)',
+                    minWidth: '110px',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <span>↺</span>
+                  <span>Clear</span>
+                </button>
+                
+                <button
+                  onClick={async () => {
+                    if (draftGeofence.length < 3) return;
+                    try {
+                      await api.post('/api/telemetry', { geofence: draftGeofence });
+                      const tel = await api.get('/api/telemetry');
+                      setTelemetry(tel);
+                      setDrawMode(false);
+                      setDraftGeofence([]);
+                    } catch (err) {
+                      console.error('Failed to save geofence:', err);
+                      alert('Failed to save geofence. Please try again.');
+                    }
+                  }}
+                  disabled={draftGeofence.length < 3}
+                  className="btn btn-accent"
+                  style={{ 
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-2)',
+                    minWidth: '150px',
+                    justifyContent: 'center',
+                    opacity: draftGeofence.length < 3 ? 0.5 : 1,
+                    cursor: draftGeofence.length < 3 ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <span>💾</span>
+                  <span>Save Geofence</span>
+                  {draftGeofence.length < 3 && (
+                    <span style={{ fontSize: 'var(--font-size-xs)', marginLeft: 'var(--space-1)' }}>
+                      ({draftGeofence.length}/3)
+                    </span>
+                  )}
+                </button>
+              </>
+            )}
           </div>
         </div>
         
         {drawMode && (
-          <div style={{ 
-            padding: 12, 
-            background: '#fef3c7', 
-            border: '1px solid #fbbf24', 
-            borderRadius: 8, 
-            marginBottom: 16,
-            fontSize: 14,
-            color: '#92400e'
+          <div className="badge badge-warning" style={{ 
+            padding: 'var(--space-4)', 
+            marginBottom: 'var(--space-4)',
+            fontSize: 'var(--font-size-sm)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)',
+            borderRadius: 'var(--radius-lg)',
+            border: 'none'
           }}>
-            <strong>Drawing Mode Active:</strong> Click and drag on the map to draw a rectangular geofence area
+            <span style={{ fontSize: '1.2rem' }}>✏️</span>
+            <div>
+              <strong>Drawing Mode Active:</strong> Click and drag on the map to draw a rectangular geofence area
+            </div>
           </div>
         )}
+        
+        <div className="badge badge-info" style={{ 
+          padding: 'var(--space-3)', 
+          marginBottom: 'var(--space-4)',
+          fontSize: 'var(--font-size-xs)',
+          display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)',
+            borderRadius: 'var(--radius-lg)',
+            border: 'none'
+        }}>
+          <span>💡</span>
+          <span><strong>Tip:</strong> Right-click and drag (or Ctrl/Cmd + left-click drag) to rotate the map</span>
+        </div>
         
         <div className="map-wrapper" style={{ position: 'relative' }}>
           <DashboardMap 
@@ -186,18 +226,88 @@ export default function MapPage() {
         </div>
         
         {telemetry.position && (
-          <div style={{ marginTop: 16, padding: 12, background: '#f9fafb', borderRadius: 8, fontSize: 13 }}>
-            <strong>Current Position:</strong> {telemetry.position.lat.toFixed(6)}, {telemetry.position.lng.toFixed(6)}
-            {telemetry.geofence.length > 0 && (
-              <span style={{ marginLeft: 16 }}>
-                <strong>Geofence:</strong> {telemetry.geofence.length} points defined
-              </span>
-            )}
-            {telemetry.route.length > 0 && (
-              <span style={{ marginLeft: 16 }}>
-                <strong>Route:</strong> {telemetry.route.length} points
-              </span>
-            )}
+          <div style={{ 
+            marginTop: 'var(--space-6)', 
+            padding: 'var(--space-5)', 
+            background: 'linear-gradient(135deg, var(--color-bg-tertiary) 0%, var(--color-bg-secondary) 100%)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-xl)', 
+            fontSize: 'var(--font-size-sm)',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 'var(--space-5)',
+            alignItems: 'center'
+          }}>
+            <div style={{ flex: '1 1 300px' }}>
+              <div style={{ 
+                fontSize: 'var(--font-size-xs)', 
+                color: 'var(--color-text-tertiary)', 
+                marginBottom: 'var(--space-2)',
+                fontWeight: 'var(--font-weight-medium)',
+                textTransform: 'uppercase',
+                letterSpacing: 'var(--letter-spacing-wider)'
+              }}>
+                Drone Location
+              </div>
+              <div style={{ 
+                fontFamily: 'var(--font-heading)',
+                fontSize: 'var(--font-size-lg)',
+                fontWeight: 'var(--font-weight-semibold)',
+                color: 'var(--color-primary)'
+              }}>
+                <span style={{ color: 'var(--color-text-secondary)', fontWeight: 'var(--font-weight-normal)' }}>Lat:</span> {telemetry.position.lat.toFixed(6)}
+                <span style={{ marginLeft: 'var(--space-4)', color: 'var(--color-text-secondary)', fontWeight: 'var(--font-weight-normal)' }}>Lng:</span> {telemetry.position.lng.toFixed(6)}
+              </div>
+              {telemetry.position.altitude && (
+                <div style={{ 
+                  fontSize: 'var(--font-size-sm)', 
+                  color: 'var(--color-text-tertiary)', 
+                  marginTop: 'var(--space-2)'
+                }}>
+                  Altitude: {telemetry.position.altitude.toFixed(1)}m
+                </div>
+              )}
+            </div>
+            
+            <div style={{ 
+              display: 'flex', 
+              gap: 'var(--space-5)', 
+              flexWrap: 'wrap',
+              fontSize: 'var(--font-size-sm)'
+            }}>
+              {telemetry.geofence.length > 0 && (
+                <div>
+                  <div style={{ 
+                    fontSize: 'var(--font-size-xs)', 
+                    color: 'var(--color-text-tertiary)', 
+                    marginBottom: 'var(--space-1)',
+                    textTransform: 'uppercase',
+                    letterSpacing: 'var(--letter-spacing-wider)'
+                  }}>
+                    Geofence
+                  </div>
+                  <div style={{ fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-primary)' }}>
+                    {telemetry.geofence.length} points
+                  </div>
+                </div>
+              )}
+              {telemetry.route.length > 0 && (
+                <div>
+                  <div style={{ 
+                    fontSize: 'var(--font-size-xs)', 
+                    color: 'var(--color-text-tertiary)', 
+                    marginBottom: 'var(--space-1)',
+                    textTransform: 'uppercase',
+                    letterSpacing: 'var(--letter-spacing-wider)'
+                  }}>
+                    Route
+                  </div>
+                  <div style={{ fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-primary)' }}>
+                    {telemetry.route.length} points
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

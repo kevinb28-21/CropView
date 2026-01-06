@@ -6,31 +6,13 @@ export default function HomePage() {
   const [telemetry, setTelemetry] = useState(null);
 
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:8',message:'useEffect mounted',data:{hidden:document.hidden},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-    
     let intervalId = null;
     let isFetching = false;
     
     const fetchData = async () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:12',message:'fetchData called',data:{hidden:document.hidden,isFetching},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      
-      // Skip if tab is hidden or already fetching
-      if (document.hidden || isFetching) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:15',message:'fetchData skipped',data:{hidden:document.hidden,isFetching},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        return;
-      }
+      if (document.hidden || isFetching) return;
       
       isFetching = true;
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:19',message:'fetchData starting API calls',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      
       try {
         const [imgs, tel] = await Promise.all([
           api.get('/api/images').catch((e) => {
@@ -42,30 +24,18 @@ export default function HomePage() {
             return null;
           })
         ]);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:34',message:'API response received',data:{imagesType:Array.isArray(imgs)?'array':typeof imgs,imagesCount:Array.isArray(imgs)?imgs.length:0,firstImage:imgs?.[0]?{id:imgs[0].id,hasPath:!!imgs[0].path,hasS3Url:!!imgs[0].s3Url,hasAnalysis:!!imgs[0].analysis}:null,telemetryType:typeof tel,hasTelemetry:!!tel},timestamp:Date.now(),sessionId:'debug-session',runId:'website-fix',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         const imagesArray = Array.isArray(imgs) ? imgs : (imgs?.images || []);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:48',message:'Setting state',data:{imagesCount:imagesArray.length,telemetrySet:!!tel},timestamp:Date.now(),sessionId:'debug-session',runId:'website-fix',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         setImages(imagesArray);
         setTelemetry(tel);
       } catch (e) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:32',message:'fetchData error',data:{error:e?.message||'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
         console.error('Error fetching data:', e);
       } finally {
         isFetching = false;
       }
     };
     
-    // Initial fetch
     fetchData();
     
-    // Poll every 30 seconds (reduced from 5 seconds to save Netlify bandwidth)
-    // Only create interval if tab is visible
     const startPolling = () => {
       if (!document.hidden && !intervalId) {
         intervalId = setInterval(() => {
@@ -73,37 +43,23 @@ export default function HomePage() {
             fetchData();
           }
         }, 30000);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:47',message:'interval created',data:{intervalId,intervalMs:30000},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
       }
     };
     
     const stopPolling = () => {
       if (intervalId) {
         clearInterval(intervalId);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:54',message:'interval cleared',data:{intervalId},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         intervalId = null;
       }
     };
     
-    // Start polling if tab is visible
     startPolling();
     
-    // Refresh immediately when tab becomes visible, and manage polling
     const handleVisibilityChange = () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:62',message:'visibility change',data:{hidden:document.hidden},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       if (document.hidden) {
         stopPolling();
       } else {
         startPolling();
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:68',message:'visibility change - calling fetchData',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         fetchData();
       }
     };
@@ -111,19 +67,10 @@ export default function HomePage() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:75',message:'useEffect cleanup',data:{intervalId},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'F'})}).catch(()=>{});
-      // #endregion
       stopPolling();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
-
-  // #region agent log
-  React.useEffect(() => {
-    fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:118',message:'Processing images',data:{totalImages:images.length,imagesWithStatus:images.filter(img=>img.processingStatus).length,imagesWithAnalysis:images.filter(img=>img.analysis).length},timestamp:Date.now(),sessionId:'debug-session',runId:'website-fix',hypothesisId:'C'})}).catch(()=>{});
-  }, [images]);
-  // #endregion
   
   const processedImages = images.filter(img => img.processingStatus === 'completed' && img.analysis);
   const avgNDVI = processedImages.length > 0
@@ -145,7 +92,6 @@ export default function HomePage() {
        processedImages.filter(img => img.analysis?.confidence).length * 100).toFixed(1)
     : null;
   
-  // Count images processed today
   const today = new Date().toDateString();
   const imagesToday = images.filter(img => {
     if (!img.createdAt) return false;
@@ -158,19 +104,27 @@ export default function HomePage() {
   }).length;
 
   return (
-    <div className="container">
+    <div className="container animate-fade-in">
       <div className="container-grid">
         <div>
-          <div className="card" style={{ marginBottom: 24 }}>
-            <div className="section-title">Welcome</div>
-            <p style={{ margin: 0, color: '#6b7280', lineHeight: 1.6 }}>
-              Drone Crop Health Dashboard for analyzing field imagery and monitoring drone telemetry. 
-              Upload images to get crop health analysis with NDVI metrics and stress zone detection.
+          <div className="card card-elevated animate-fade-in-up" style={{ marginBottom: 'var(--space-6)' }}>
+            <h2 className="section-title" style={{ marginBottom: 'var(--space-4)' }}>
+              Welcome to Precision Agriculture
+            </h2>
+            <p style={{ 
+              margin: 0, 
+              color: 'var(--color-text-secondary)', 
+              lineHeight: 'var(--line-height-relaxed)',
+              fontSize: 'var(--font-size-base)'
+            }}>
+              Advanced drone-based crop health monitoring and analysis platform. 
+              Upload field imagery for real-time NDVI analysis, stress zone detection, 
+              and comprehensive agricultural intelligence.
             </p>
           </div>
 
-          <div className="card">
-            <div className="section-title">Quick Stats</div>
+          <div className="card card-elevated animate-fade-in-up stagger-1">
+            <h3 className="section-title">Performance Metrics</h3>
             <div className="metrics">
               <div className="metric">
                 <div className="metric-label">Images Analyzed</div>
@@ -202,91 +156,112 @@ export default function HomePage() {
               )}
               {avgHealthScore && (
                 <div className="metric">
-                  <div className="metric-label">Avg Health Score</div>
+                  <div className="metric-label">Health Score</div>
                   <div className="metric-value">{avgHealthScore}</div>
                 </div>
               )}
               {avgConfidence && (
                 <div className="metric">
                   <div className="metric-label">ML Confidence</div>
-                  <div className="metric-value" style={{ fontSize: 18 }}>{avgConfidence}%</div>
+                  <div className="metric-value" style={{ fontSize: 'var(--font-size-2xl)' }}>
+                    {avgConfidence}%
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="card">
-            <div className="section-title">Getting Started</div>
-            <ul style={{ margin: 0, paddingLeft: 20, color: '#6b7280', lineHeight: 1.8 }}>
-              <li>Go to <strong>Analytics</strong> to upload field images for analysis</li>
-              <li>View <strong>Map</strong> to see drone location and draw geofenced areas</li>
-              <li>Check <strong>ML</strong> for model integration information</li>
+          <div className="card animate-fade-in-up stagger-2">
+            <h3 className="section-title">Quick Start Guide</h3>
+            <ul style={{ 
+              margin: 0, 
+              paddingLeft: 'var(--space-6)', 
+              color: 'var(--color-text-secondary)', 
+              lineHeight: 'var(--line-height-relaxed)',
+              listStyle: 'none'
+            }}>
+              <li style={{ marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'start', gap: 'var(--space-3)' }}>
+                <span style={{ color: 'var(--color-accent)', fontSize: 'var(--font-size-lg)' }}>→</span>
+                <span>Navigate to <strong style={{ color: 'var(--color-primary)' }}>Analytics</strong> to upload field images for comprehensive analysis</span>
+              </li>
+              <li style={{ marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'start', gap: 'var(--space-3)' }}>
+                <span style={{ color: 'var(--color-accent)', fontSize: 'var(--font-size-lg)' }}>→</span>
+                <span>View <strong style={{ color: 'var(--color-primary)' }}>Map</strong> to monitor drone location and define geofenced areas</span>
+              </li>
+              <li style={{ display: 'flex', alignItems: 'start', gap: 'var(--space-3)' }}>
+                <span style={{ color: 'var(--color-accent)', fontSize: 'var(--font-size-lg)' }}>→</span>
+                <span>Explore <strong style={{ color: 'var(--color-primary)' }}>ML Insights</strong> for advanced model predictions and recommendations</span>
+              </li>
             </ul>
           </div>
         </div>
 
-        <div className="card">
-          <div className="section-title">Recent Activity</div>
+        <div className="card card-elevated animate-fade-in-up stagger-3">
+          <h3 className="section-title">Recent Activity</h3>
           {images.length === 0 && (
             <div className="empty-state">
-              <div className="empty-state-icon">📋</div>
-              <div>No recent activity</div>
-              <div style={{ fontSize: 14, marginTop: 8 }}>Upload your first image to get started</div>
+              <div className="empty-state-icon">🌾</div>
+              <div className="empty-state-title">No Recent Activity</div>
+              <div className="empty-state-description">
+                Upload your first field image to begin crop health analysis
+              </div>
             </div>
           )}
           {images.length > 0 && (
             <div className="list">
-              {images.slice(0, 5).map(img => (
-                <div key={img.id} className="list-item" style={{ cursor: 'default' }}>
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
+              {images.slice(0, 5).map((img, idx) => (
+                <div 
+                  key={img.id} 
+                  className="list-item animate-fade-in-up"
+                  style={{ 
+                    animationDelay: `${idx * 0.1}s`,
+                    cursor: 'default'
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flex: 1 }}>
                     <img 
                       src={buildImageUrl(img) || '/placeholder.png'} 
                       alt="" 
                       style={{ 
-                        width: 40, 
-                        height: 40, 
+                        width: 48, 
+                        height: 48, 
                         objectFit: 'cover', 
-                        borderRadius: 6, 
-                        border: '1px solid #e5e7eb' 
+                        borderRadius: 'var(--radius-md)', 
+                        border: '2px solid var(--color-border)',
+                        background: 'var(--color-bg-tertiary)'
                       }} 
                       onError={(e) => {
-                        // #region agent log
-                        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:237',message:'Image load error',data:{imageId:img.id,s3Url:img.s3Url,path:img.path,builtUrl:buildImageUrl(img)},timestamp:Date.now(),sessionId:'debug-session',runId:'website-fix',hypothesisId:'B'})}).catch(()=>{});
-                        // #endregion
                         e.target.style.display = 'none';
                       }}
-                      onLoad={() => {
-                        // #region agent log
-                        fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Home.jsx:244',message:'Image loaded successfully',data:{imageId:img.id},timestamp:Date.now(),sessionId:'debug-session',runId:'website-fix',hypothesisId:'B'})}).catch(()=>{});
-                        // #endregion
-                      }}
                     />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500 }}>{img.originalName || img.filename}</div>
-                      <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ 
+                        fontSize: 'var(--font-size-sm)', 
+                        fontWeight: 'var(--font-weight-semibold)',
+                        color: 'var(--color-text-primary)',
+                        marginBottom: 'var(--space-1)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {img.originalName || img.filename || 'Untitled Image'}
+                      </div>
+                      <div style={{ 
+                        fontSize: 'var(--font-size-xs)', 
+                        color: 'var(--color-text-tertiary)'
+                      }}>
                         {formatDate(img.createdAt, 'date')}
                       </div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexShrink: 0 }}>
                     {img.processingStatus && (
-                      <span style={{
-                        fontSize: 10,
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        background: img.processingStatus === 'completed' ? '#d1fae5' :
-                                   img.processingStatus === 'processing' ? '#fef3c7' :
-                                   img.processingStatus === 'failed' ? '#fee2e2' : '#f3f4f6',
-                        color: img.processingStatus === 'completed' ? '#065f46' :
-                               img.processingStatus === 'processing' ? '#92400e' :
-                               img.processingStatus === 'failed' ? '#991b1b' : '#6b7280',
-                        fontWeight: 500
-                      }}>
+                      <span className={`badge badge-${img.processingStatus === 'completed' ? 'success' : img.processingStatus === 'processing' ? 'info' : 'warning'}`}>
                         {img.processingStatus}
                       </span>
                     )}
                     {img?.analysis?.ndvi?.mean !== undefined && (
-                      <span className="badge" style={{ fontSize: 11 }}>
+                      <span className="badge badge-info" style={{ fontSize: 'var(--font-size-xs)' }}>
                         NDVI {img.analysis?.ndvi?.mean?.toFixed(2) || 'N/A'}
                       </span>
                     )}

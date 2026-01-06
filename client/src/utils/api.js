@@ -48,6 +48,19 @@ export const api = {
       return response.json();
     } catch (error) {
       console.error('API GET Error:', error);
+      
+      // Provide helpful error message for connection failures
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        const helpfulError = new Error(
+          `Cannot connect to backend server at ${url}. ` +
+          `Please ensure the backend server is running on port 5050. ` +
+          `Run: cd server && npm run dev`
+        );
+        helpfulError.name = 'ConnectionError';
+        helpfulError.originalError = error;
+        throw helpfulError;
+      }
+      
       throw error;
     }
   },

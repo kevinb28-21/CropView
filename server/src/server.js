@@ -177,13 +177,49 @@ app.post('/api/images', upload.single('image'), async (req, res) => {
   }
 });
 
-// List images
+// List images (backward compatible - also supports new paginated endpoint)
 app.get('/api/images', async (req, res) => {
   try {
     if (!dbConnected) {
       return res.status(503).json({ error: 'Database not connected' });
     }
     
+    // Check if using new pagination format
+    if (req.query.page || req.query.offset || req.query.status || req.query.hasAnalysis) {
+      // Use enhanced pagination if available
+      try {
+        const { getImagesPaginated } = await import('./db-utils-enhanced.js');
+        const { validatePagination } = await import('./middleware/validator.js');
+        
+        // Create a mock request object for validation
+        const mockReq = { ...req, pagination: { 
+          limit: parseInt(req.query.limit || '50', 10),
+          offset: parseInt(req.query.offset || req.query.page ? (parseInt(req.query.page || '1', 10) - 1) * parseInt(req.query.limit || '50', 10) : '0', 10),
+          page: parseInt(req.query.page || '1', 10)
+        }};
+        
+        const options = {
+          limit: mockReq.pagination.limit,
+          offset: mockReq.pagination.offset,
+          status: req.query.status,
+          hasAnalysis: req.query.hasAnalysis === 'true' ? true : req.query.hasAnalysis === 'false' ? false : undefined,
+          minHealthScore: req.query.minHealthScore ? parseFloat(req.query.minHealthScore) : undefined,
+          maxHealthScore: req.query.maxHealthScore ? parseFloat(req.query.maxHealthScore) : undefined,
+          healthStatus: req.query.healthStatus,
+          sortBy: req.query.sortBy || 'uploaded_at',
+          sortOrder: req.query.sortOrder || 'DESC',
+          search: req.query.search
+        };
+        
+        const result = await getImagesPaginated(options);
+        return res.json(result);
+      } catch (e) {
+        // Fall back to old method if enhanced not available
+        console.warn('Enhanced pagination not available, using legacy method');
+      }
+    }
+    
+    // Legacy method
     const limit = parseInt(req.query.limit || '100', 10);
     const images = await getAllImages(limit);
     res.json(images);

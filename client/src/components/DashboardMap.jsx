@@ -2,6 +2,9 @@ import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, Polygon, Tooltip, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { ZoomControl, CompassControl, FullscreenControl } from './MapControls.jsx';
+import { MouseRotation } from './MouseRotation.jsx';
+import { MapMarkerUpdater } from './MapMarkerUpdater.jsx';
 
 const droneIcon = new L.Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -121,133 +124,6 @@ function DragRectangle({ drawMode, onDraftChange }) {
   return null;
 }
 
-// Rotation control component
-function RotationControl({ rotation, onRotationChange }) {
-  const map = useMap();
-  const [currentRotation, setCurrentRotation] = useState(rotation || 0);
-
-  useEffect(() => {
-    if (rotation !== undefined && rotation !== currentRotation) {
-      setCurrentRotation(rotation);
-    }
-  }, [rotation]);
-
-  useEffect(() => {
-    // Rotate only the tile pane (the actual map tiles), not the entire container
-    // This keeps markers, polygons, and controls in their correct positions
-    const tilePane = map.getPane('tilePane');
-    if (tilePane) {
-      tilePane.style.transform = `rotate(${currentRotation}deg)`;
-      tilePane.style.transition = 'transform 0.3s ease';
-      // Rotate around the center of the map
-      tilePane.style.transformOrigin = '50% 50%';
-    }
-    
-    // Update transform origin on map resize
-    const updateTransformOrigin = () => {
-      if (tilePane) {
-        tilePane.style.transformOrigin = '50% 50%';
-      }
-    };
-    
-    map.on('resize', updateTransformOrigin);
-    
-    return () => {
-      map.off('resize', updateTransformOrigin);
-    };
-  }, [currentRotation, map]);
-
-  const handleRotate = (delta) => {
-    const newRotation = (currentRotation + delta) % 360;
-    setCurrentRotation(newRotation);
-    onRotationChange?.(newRotation);
-  };
-
-  return (
-    <div 
-      className="leaflet-control"
-      style={{
-        position: 'absolute',
-        top: '10px',
-        right: '10px',
-        zIndex: 1000,
-        background: 'white',
-        borderRadius: '4px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-        padding: '8px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4px',
-        pointerEvents: 'auto'
-      }}
-    >
-      <button
-        onClick={() => handleRotate(-15)}
-        style={{
-          padding: '4px 8px',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          background: 'white',
-          cursor: 'pointer',
-          fontSize: '14px',
-          transition: 'background 0.2s'
-        }}
-        onMouseEnter={(e) => e.target.style.background = '#f0f0f0'}
-        onMouseLeave={(e) => e.target.style.background = 'white'}
-        title="Rotate left 15°"
-      >
-        ↺ -15°
-      </button>
-      <div style={{
-        textAlign: 'center',
-        fontSize: '12px',
-        padding: '4px',
-        color: '#666',
-        fontWeight: 500
-      }}>
-        {currentRotation}°
-      </div>
-      <button
-        onClick={() => handleRotate(15)}
-        style={{
-          padding: '4px 8px',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          background: 'white',
-          cursor: 'pointer',
-          fontSize: '14px',
-          transition: 'background 0.2s'
-        }}
-        onMouseEnter={(e) => e.target.style.background = '#f0f0f0'}
-        onMouseLeave={(e) => e.target.style.background = 'white'}
-        title="Rotate right 15°"
-      >
-        ↻ +15°
-      </button>
-      <button
-        onClick={() => {
-          setCurrentRotation(0);
-          onRotationChange?.(0);
-        }}
-        style={{
-          padding: '4px 8px',
-          border: '1px solid #ccc',
-          borderRadius: '4px',
-          background: '#f0f0f0',
-          cursor: 'pointer',
-          fontSize: '11px',
-          marginTop: '4px',
-          transition: 'background 0.2s'
-        }}
-        onMouseEnter={(e) => e.target.style.background = '#e0e0e0'}
-        onMouseLeave={(e) => e.target.style.background = '#f0f0f0'}
-        title="Reset rotation"
-      >
-        Reset
-      </button>
-    </div>
-  );
-}
 
 export default function DashboardMap({ 
   telemetry, 
@@ -272,17 +148,38 @@ export default function DashboardMap({
       zoom={15} 
       style={{ height: '100%', width: '100%', position: 'relative' }}
       scrollWheelZoom={true}
+      zoomControl={false}
+      preferCanvas={true}
+      fadeAnimation={false}
+      zoomAnimation={true}
+      markerZoomAnimation={true}
     >
       <TileLayer 
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
-        attribution="&copy; OpenStreetMap contributors" 
+        attribution="&copy; OpenStreetMap contributors"
+        updateWhenZooming={false}
+        updateWhenIdle={true}
+        keepBuffer={3}
+        maxZoom={19}
+        minZoom={3}
+        tileSize={256}
+        zoomOffset={0}
+        noWrap={false}
       />
       
       <DragRectangle drawMode={drawMode} onDraftChange={onDraftChange} />
-      <RotationControl rotation={rotation} onRotationChange={onRotationChange} />
+      <MouseRotation rotation={rotation} onRotationChange={onRotationChange} />
+      <MapMarkerUpdater rotation={rotation} />
+      <ZoomControl />
+      <CompassControl rotation={rotation} onRotationChange={onRotationChange} />
+      <FullscreenControl />
 
       {telemetry?.position && (
-        <Marker position={center} icon={droneIcon}>
+        <Marker 
+          position={[telemetry.position.lat, telemetry.position.lng]} 
+          icon={droneIcon}
+          key={`drone-${telemetry.position.lat}-${telemetry.position.lng}`}
+        >
           <Tooltip direction="top" offset={[0, -10]} opacity={1} permanent>
             Drone
           </Tooltip>
