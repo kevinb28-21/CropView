@@ -1,0 +1,61 @@
+# Dataset Registry - Band Order and Schema Definitions
+# Standardized to 4-channel multispectral: [R, G, B, NIR]
+# Red-Edge (RE) bands are dropped for cost-effective CPU inference
+
+datasets:
+  # RGB-only datasets
+  plantvillage:
+    band_order: ["R", "G", "B"]
+    band_count: 3
+    domain: "leaf"
+    domain_mismatch_warning: true
+  
+  tom2024:
+    band_order: ["R", "G", "B"]
+    band_count: 3
+    domain: "mixed"
+    domain_mismatch_warning: true
+  
+  # Multispectral datasets (standardized to RGB+NIR)
+  cherry_tomato_dryad:
+    # Original: [G, R, NIR] - reorder to [R, G, B, NIR] (B is zero-filled; band_mask marks B missing)
+    band_order: ["R", "G", "B", "NIR"]
+    band_count: 4
+    source_band_order: ["G", "R", "NIR"]  # Original order for reference
+    domain: "uav"
+    domain_mismatch_warning: false
+  
+  weedsgalore:
+    # Original: [R, G, B, RE, NIR] - drop RE, keep [R, G, B, NIR]
+    band_order: ["R", "G", "B", "NIR"]
+    band_count: 4
+    source_band_order: ["R", "G", "B", "RE", "NIR"]  # Original order for reference
+    domain: "uav"
+    domain_mismatch_warning: false
+  
+  # Default for unknown datasets
+  default:
+    band_order: ["R", "G", "B"]
+    band_count: 3
+    domain: "unknown"
+    domain_mismatch_warning: false
+
+# Standard band schemas (4-channel multispectral standard)
+schemas:
+  rgb:
+    bands: ["R", "G", "B"]
+    count: 3
+  
+  rgb_nir:
+    bands: ["R", "G", "B", "NIR"]
+    count: 4
+    # This is the standard multispectral schema
+
+# Band name to canonical index mapping (for 4-channel standard)
+canonical_band_order: ["R", "G", "B", "NIR"]
+canonical_band_indices:
+  R: 0
+  G: 1
+  B: 2
+  NIR: 3
+

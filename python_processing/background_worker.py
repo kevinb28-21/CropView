@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 from image_processor import analyze_crop_health, calculate_savi, calculate_gndvi
+from multispectral_loader import validate_canonical_band_order
 from db_utils import (
     get_pending_images,
     set_processing_started,
@@ -55,6 +56,15 @@ os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
 # Global flag for graceful shutdown
 running = True
+
+# Global model cache (loaded once)
+_model_cache = {
+    'model': None,
+    'model_path': None,
+    'model_type': None,
+    'health_classes': None,
+    'crop_classes': None
+}
 
 
 def signal_handler(sig, frame):
@@ -207,6 +217,81 @@ def _update_file_path_in_db(image_id: str, file_path: str, set_s3_stored_false: 
             return_db_connection(conn)
 
 
+def load_model_once():
+    """
+    Load model once and cache it globally.
+    Called at worker startup.
+    """
+    global _model_cache
+    
+    if _model_cache['model'] is not None:
+        return _model_cache
+    
+    multi_crop_model_path = os.getenv('MULTI_CROP_MODEL_PATH')
+    multi_crop_model_dir = os.getenv('MULTI_CROP_MODEL_DIR', './models/multi_crop')
+    use_multi_crop = os.getenv('USE_MULTI_CROP_MODEL', 'true').lower() == 'true'
+    
+    # Try to find multi-crop model
+    if use_multi_crop and not multi_crop_model_path:
+        import glob
+        if os.path.exists(multi_crop_model_dir):
+            model_files = glob.glob(os.path.join(multi_crop_model_dir, '*_final.h5'))
+            if model_files:
+                multi_crop_model_path = max(model_files, key=os.path.getmtime)
+    
+    # Fallback to single-crop model
+    single_crop_model_path = os.getenv('ONION_MODEL_PATH', './models/onion_crop_health_model.h5')
+    
+    model_path = None
+    model_type = None
+    
+    if use_multi_crop and multi_crop_model_path and os.path.exists(multi_crop_model_path):
+        model_path = multi_crop_model_path
+        model_type = 'multi_crop'
+        logger.info(f"Loading multi-crop TensorFlow model: {model_path}")
+    elif single_crop_model_path and os.path.exists(single_crop_model_path):
+        model_path = single_crop_model_path
+        model_type = 'single_crop'
+        logger.info(f"Loading single-crop TensorFlow model: {model_path}")
+    else:
+        logger.info("No TensorFlow model found, will use vegetation index analysis only")
+        _model_cache['model'] = None
+        _model_cache['model_path'] = None
+        _model_cache['model_type'] = None
+        return _model_cache
+    
+    try:
+        import tensorflow as tf
+        model = tf.keras.models.load_model(model_path)
+        
+        # Load class names
+        import glob
+        import json
+        model_dir = os.path.dirname(model_path)
+        metadata_files = glob.glob(os.path.join(model_dir, '*_metadata.json'))
+        if metadata_files:
+            with open(max(metadata_files, key=os.path.getmtime), 'r') as f:
+                metadata = json.load(f)
+                health_classes = metadata.get('health_classes', [])
+                crop_classes = metadata.get('crop_types', [])
+        else:
+            health_classes = None
+            crop_classes = None
+        
+        _model_cache['model'] = model
+        _model_cache['model_path'] = model_path
+        _model_cache['model_type'] = model_type
+        _model_cache['health_classes'] = health_classes
+        _model_cache['crop_classes'] = crop_classes
+        
+        logger.info(f"✓ Model loaded successfully: {model_type}")
+        return _model_cache
+    except Exception as e:
+        logger.error(f"Failed to load model: {e}", exc_info=True)
+        _model_cache['model'] = None
+        return _model_cache
+
+
 def process_image(image_record: dict) -> bool:
     """
     Process a single image through the analysis pipeline
@@ -235,27 +320,68 @@ def process_image(image_record: dict) -> bool:
             return False
         
         # Step 3: Perform analysis (includes NDVI, SAVI, GNDVI)
-        # Try to use TensorFlow model if available
-        model_path = os.getenv('ONION_MODEL_PATH', './models/onion_crop_health_model.h5')
-        use_tensorflow = os.path.exists(model_path) if model_path else False
+        # Use cached model if available
+        use_tensorflow = _model_cache['model'] is not None
+        model_path = _model_cache['model_path']
+        use_multi_crop = _model_cache['model_type'] == 'multi_crop'
         
-        if use_tensorflow:
-            logger.info(f"Using TensorFlow model for analysis: {model_path}")
-        else:
-            logger.info(f"TensorFlow model not found, using vegetation index analysis only")
-        
-        logger.info(f"Analyzing onion crop image: {image_path}")
-        analysis_result = analyze_crop_health(image_path, use_tensorflow=use_tensorflow, model_path=model_path if use_tensorflow else None)
+        logger.info(f"Analyzing crop image: {image_path}")
+        analysis_result = analyze_crop_health(
+            image_path,
+            use_tensorflow=use_tensorflow,
+            model_path=model_path if use_tensorflow else None,
+            use_multi_crop=use_multi_crop
+        )
         
         # Extract TensorFlow model results if available
         tf_results = analysis_result.get('tensorflow', {})
         if tf_results and tf_results.get('model_loaded'):
             # Use TensorFlow classification if available
-            analysis_result['health_status'] = tf_results.get('classification', analysis_result.get('health_status'))
-            analysis_result['confidence'] = tf_results.get('confidence', 0.0)
-            analysis_result['model_version'] = os.path.basename(model_path) if model_path else None
-            analysis_result['analysis_type'] = 'tensorflow_onion_classification'
-            logger.info(f"TensorFlow classification: {tf_results.get('classification')} (confidence: {tf_results.get('confidence', 0):.2%})")
+            if use_multi_crop:
+                # Multi-crop model results
+                analysis_result['health_status'] = tf_results.get('health_classification', analysis_result.get('health_status'))
+                analysis_result['confidence'] = tf_results.get('health_confidence', 0.0)
+                analysis_result['crop_type'] = tf_results.get('crop_type', 'unknown')
+                analysis_result['crop_confidence'] = tf_results.get('crop_confidence', 0.0)
+                analysis_result['model_version'] = os.path.basename(model_path) if model_path else None
+                analysis_result['analysis_type'] = 'multi_crop_tensorflow'
+                
+                # Log processing path and bands
+                processing_path = tf_results.get('processing_path', 'unknown')
+                band_schema = tf_results.get('band_schema', {})
+                bands_used = band_schema.get('bands', [])
+                logger.info(
+                    f"Multi-crop TensorFlow classification (path: {processing_path}, bands: {bands_used}): "
+                    f"crop={tf_results.get('crop_type', 'unknown')} "
+                    f"(confidence: {tf_results.get('crop_confidence', 0):.2%}), "
+                    f"health={tf_results.get('health_classification')} "
+                    f"(confidence: {tf_results.get('health_confidence', 0):.2%})"
+                )
+                
+                # Add additional fields for database
+                analysis_result['band_schema'] = band_schema
+                analysis_result['health_topk'] = tf_results.get('health_topk', [])
+                analysis_result['crop_topk'] = tf_results.get('crop_topk', [])
+                analysis_result['inference_time_ms'] = tf_results.get('inference_time_ms')
+                analysis_result['heuristic_fusion_score'] = tf_results.get('heuristic_fusion_score')
+                
+                # Check for missing required bands warning
+                if processing_path == 'rgb' and 'NIR' not in bands_used:
+                    logger.warning(
+                        f"Image {image_id}: Multispectral model requested but NIR band not available. "
+                        f"Using RGB path only. Band schema: {band_schema}"
+                    )
+            else:
+                # Single-crop model results (legacy)
+                analysis_result['health_status'] = tf_results.get('classification', analysis_result.get('health_status'))
+                analysis_result['confidence'] = tf_results.get('confidence', 0.0)
+                analysis_result['crop_type'] = tf_results.get('crop_type', 'onion')  # Legacy default
+                analysis_result['model_version'] = os.path.basename(model_path) if model_path else None
+                analysis_result['analysis_type'] = 'tensorflow_single_crop'
+                logger.info(
+                    f"TensorFlow classification: {tf_results.get('classification')} "
+                    f"(confidence: {tf_results.get('confidence', 0):.2%})"
+                )
         
         # Ensure all vegetation indices are calculated
         # (analyze_crop_health should include all, but double-check)
@@ -353,6 +479,13 @@ def main():
     logger.info("Background Image Processing Worker Starting")
     logger.info("=" * 60)
     
+    # Validate canonical band order at startup (fail fast if mismatch)
+    try:
+        validate_canonical_band_order()
+    except RuntimeError as e:
+        logger.error(f"Startup validation failed: {e}")
+        sys.exit(1)
+    
     # Test database connection
     if not test_connection():
         logger.error("Database connection failed. Exiting.")
@@ -365,6 +498,12 @@ def main():
     logger.info("-" * 60)
     logger.info("Repairing image file paths...")
     repair_image_paths()
+    logger.info("-" * 60)
+    
+    # Load model once at startup
+    logger.info("-" * 60)
+    logger.info("Loading ML model...")
+    load_model_once()
     logger.info("-" * 60)
     
     logger.info("Worker is running. Press Ctrl+C to stop.")
