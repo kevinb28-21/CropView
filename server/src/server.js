@@ -334,6 +334,234 @@ app.post('/api/telemetry', async (req, res) => {
   }
 });
 
+// ML Status endpoint - Check if model is available on EC2 worker
+app.get('/api/ml/status', async (req, res) => {
+  try {
+    // Get worker directory (python_processing) - assume it's at the same level as server
+    const serverDir = path.dirname(__dirname);
+    const projectRoot = path.dirname(serverDir);
+    const pythonProcessingDir = path.join(projectRoot, 'python_processing');
+    
+    // Check environment variables (from worker's perspective)
+    const useMultiCrop = process.env.USE_MULTI_CROP_MODEL || 'true';
+    const multiCropModelPath = process.env.MULTI_CROP_MODEL_PATH;
+    const multiCropModelDir = process.env.MULTI_CROP_MODEL_DIR || path.join(pythonProcessingDir, 'models', 'multi_crop');
+    const singleCropModelPath = process.env.ONION_MODEL_PATH || path.join(pythonProcessingDir, 'models', 'onion_crop_health_model.h5');
+    const modelChannels = process.env.MODEL_CHANNELS || '3';
+    
+    let modelAvailable = false;
+    let modelType = 'none';
+    let modelPath = null;
+    let modelVersion = null;
+    
+    // Check for multi-crop model first (preferred)
+    if (useMultiCrop.toLowerCase() === 'true') {
+      let multiCropPath = multiCropModelPath;
+      
+      // If path not specified, try to find latest model in directory
+      if (!multiCropPath && fs.existsSync(multiCropModelDir)) {
+        try {
+          const files = fs.readdirSync(multiCropModelDir);
+          const modelFiles = files.filter(f => f.endsWith('_final.h5'));
+          if (modelFiles.length > 0) {
+            // Get most recently modified
+            const modelPaths = modelFiles.map(f => path.join(multiCropModelDir, f));
+            multiCropPath = modelPaths.reduce((latest, current) => {
+              const latestTime = fs.statSync(latest).mtime;
+              const currentTime = fs.statSync(current).mtime;
+              return currentTime > latestTime ? current : latest;
+            });
+          }
+        } catch (e) {
+          console.warn('Error reading multi-crop model directory:', e.message);
+        }
+      }
+      
+      if (multiCropPath && fs.existsSync(multiCropPath)) {
+        modelAvailable = true;
+        modelType = 'multi_crop';
+        modelPath = multiCropPath;
+        
+        // Try to extract version from metadata
+        try {
+          const modelDir = path.dirname(multiCropPath);
+          const metadataFiles = fs.readdirSync(modelDir).filter(f => f.endsWith('_metadata.json'));
+          if (metadataFiles.length > 0) {
+            const metadataPath = path.join(modelDir, metadataFiles[0]);
+            const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+            modelVersion = metadata.model_version || metadata.training_date || path.basename(multiCropPath);
+          } else {
+            modelVersion = path.basename(multiCropPath);
+          }
+        } catch (e) {
+          modelVersion = path.basename(multiCropPath);
+        }
+      }
+    }
+    
+    // Fallback to single-crop model
+    if (!modelAvailable && fs.existsSync(singleCropModelPath)) {
+      modelAvailable = true;
+      modelType = 'single_crop';
+      modelPath = singleCropModelPath;
+      modelVersion = path.basename(singleCropModelPath);
+    }
+    
+    res.json({
+      model_available: modelAvailable,
+      model_type: modelType,
+      model_path: modelPath,
+      model_version: modelVersion,
+      channels: parseInt(modelChannels, 10),
+      worker_config: {
+        USE_MULTI_CROP_MODEL: useMultiCrop.toLowerCase() === 'true',
+        MULTI_CROP_MODEL_DIR: multiCropModelDir,
+        MULTI_CROP_MODEL_PATH: multiCropModelPath || null,
+        MODEL_CHANNELS: modelChannels,
+        ONION_MODEL_PATH: singleCropModelPath
+      }
+    });
+  } catch (error) {
+    console.error('Error checking ML status:', error);
+    res.status(500).json({ 
+      error: 'Failed to check ML status', 
+      details: error.message,
+      model_available: false,
+      model_type: 'none'
+    });
+  }
+});
+
+// ML Recent Predictions endpoint - Get recent ML predictions from database
+app.get('/api/ml/recent', async (req, res) => {
+  try {
+    if (!dbConnected) {
+      return res.status(503).json({ error: 'Database not connected' });
+    }
+    
+    const limit = parseInt(req.query.limit || '10', 10);
+    const pool = getDbPool();
+    
+    // Check which columns exist (backward compatible)
+    const hasCropType = await columnExists('analyses', 'crop_type');
+    const hasCropConfidence = await columnExists('analyses', 'crop_confidence');
+    const hasHeuristicFusion = await columnExists('analyses', 'heuristic_fusion_score');
+    const hasBandSchema = await columnExists('analyses', 'band_schema');
+    const hasGndvi = await hasGndviColumns();
+    
+    // Build query with available fields
+    const cropFields = hasCropType && hasCropConfidence 
+      ? 'a.crop_type, a.crop_confidence,'
+      : '';
+    const fusionField = hasHeuristicFusion ? 'a.heuristic_fusion_score,' : '';
+    const bandSchemaField = hasBandSchema ? 'a.band_schema,' : '';
+    const gndviFields = hasGndvi 
+      ? 'a.gndvi_mean, a.gndvi_std, a.gndvi_min, a.gndvi_max,'
+      : '';
+    
+    const query = `
+      SELECT 
+        i.id as image_id,
+        i.filename,
+        i.original_name,
+        a.processed_at,
+        a.health_status,
+        a.confidence,
+        ${cropFields}
+        a.model_version,
+        a.analysis_type,
+        a.health_score,
+        ${fusionField}
+        ${bandSchemaField}
+        a.ndvi_mean,
+        a.savi_mean,
+        ${gndviFields}
+        a.processed_s3_url,
+        a.processed_image_path
+      FROM analyses a
+      INNER JOIN images i ON a.image_id = i.id
+      WHERE a.confidence IS NOT NULL
+        AND a.health_status IS NOT NULL
+        AND i.processing_status = 'completed'
+      ORDER BY a.processed_at DESC
+      LIMIT $1
+    `;
+    
+    const result = await pool.query(query, [limit]);
+    
+    const predictions = result.rows.map(row => {
+      const prediction = {
+        image_id: row.image_id,
+        filename: row.filename || row.original_name,
+        processed_at: row.processed_at?.toISOString(),
+        health_status: row.health_status,
+        confidence: row.confidence ? parseFloat(row.confidence) : null,
+        model_version: row.model_version,
+        analysis_type: row.analysis_type,
+        health_score: row.health_score ? parseFloat(row.health_score) : null,
+        ndvi_mean: row.ndvi_mean ? parseFloat(row.ndvi_mean) : null,
+        savi_mean: row.savi_mean ? parseFloat(row.savi_mean) : null,
+        processed_image_url: row.processed_s3_url || row.processed_image_path
+      };
+      
+      if (hasCropType && hasCropConfidence) {
+        prediction.crop_type = row.crop_type;
+        prediction.crop_confidence = row.crop_confidence ? parseFloat(row.crop_confidence) : null;
+      }
+      
+      if (hasHeuristicFusion) {
+        prediction.heuristic_fusion_score = row.heuristic_fusion_score ? parseFloat(row.heuristic_fusion_score) : null;
+      }
+      
+      if (hasBandSchema && row.band_schema) {
+        try {
+          prediction.band_schema = typeof row.band_schema === 'string' 
+            ? JSON.parse(row.band_schema) 
+            : row.band_schema;
+        } catch (e) {
+          prediction.band_schema = null;
+        }
+      }
+      
+      if (hasGndvi) {
+        prediction.gndvi_mean = row.gndvi_mean ? parseFloat(row.gndvi_mean) : null;
+      }
+      
+      return prediction;
+    });
+    
+    res.json({
+      predictions,
+      count: predictions.length,
+      available_fields: {
+        crop_type: hasCropType && hasCropConfidence,
+        heuristic_fusion_score: hasHeuristicFusion,
+        band_schema: hasBandSchema,
+        gndvi: hasGndvi
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching recent ML predictions:', error);
+    res.status(500).json({ error: 'Failed to fetch recent predictions', details: error.message });
+  }
+});
+
+// Helper function to check if column exists
+async function columnExists(tableName, columnName) {
+  try {
+    const pool = getDbPool();
+    const result = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = $1 AND column_name = $2
+    `, [tableName, columnName]);
+    return result.rows.length > 0;
+  } catch (error) {
+    console.error(`Error checking column ${tableName}.${columnName}:`, error);
+    return false;
+  }
+}
+
 app.listen(PORT, '0.0.0.0', async () => {
   console.log(`Server listening on http://0.0.0.0:${PORT} (accessible from external connections)`);
   

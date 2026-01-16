@@ -3,23 +3,43 @@ import { api } from '../utils/api';
 
 /**
  * ModelTraining Component
- * Displays ML model training status and information
+ * Displays ML model training status and information from backend
  */
 export default function ModelTraining() {
   const [modelInfo, setModelInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // In a real implementation, this would fetch model info from an API
-    // For now, we'll show placeholder structure
-    setLoading(false);
-    setModelInfo({
-      loaded: false,
-      version: null,
-      lastTrained: null,
-      accuracy: null,
-      datasetSize: null
-    });
+    const fetchModelStatus = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const status = await api.get('/api/ml/status');
+        setModelInfo(status);
+      } catch (err) {
+        console.error('Failed to fetch model status:', err);
+        setError(err.message || 'Failed to load model status');
+        // Set default state on error
+        setModelInfo({
+          model_available: false,
+          model_type: 'none',
+          model_path: null,
+          model_version: null,
+          channels: 3,
+          worker_config: {
+            USE_MULTI_CROP_MODEL: true,
+            MULTI_CROP_MODEL_DIR: './models/multi_crop',
+            MULTI_CROP_MODEL_PATH: null,
+            MODEL_CHANNELS: '3'
+          }
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchModelStatus();
   }, []);
 
   if (loading) {
@@ -30,13 +50,25 @@ export default function ModelTraining() {
     );
   }
 
+  if (error && !modelInfo) {
+    return (
+      <div style={{ padding: 20, textAlign: 'center', color: '#dc2626' }}>
+        <div>Error loading model status: {error}</div>
+      </div>
+    );
+  }
+
+  const modelAvailable = modelInfo?.model_available || false;
+  const modelType = modelInfo?.model_type || 'none';
+  const workerConfig = modelInfo?.worker_config || {};
+
   return (
     <div>
       {/* Model Status */}
       <div style={{
         padding: 16,
-        background: modelInfo?.loaded ? '#d1fae5' : '#fef3c7',
-        border: `1px solid ${modelInfo?.loaded ? '#059669' : '#f59e0b'}`,
+        background: modelAvailable ? '#d1fae5' : '#fef3c7',
+        border: `1px solid ${modelAvailable ? '#059669' : '#f59e0b'}`,
         borderRadius: 8,
         marginBottom: 20
       }}>
@@ -47,28 +79,48 @@ export default function ModelTraining() {
           marginBottom: 8
         }}>
           <span style={{ fontSize: 20 }}>
-            {modelInfo?.loaded ? '✓' : '⚠'}
+            {modelAvailable ? '✓' : '⚠'}
           </span>
           <div style={{ fontWeight: 600, color: '#111827' }}>
-            Model Status: {modelInfo?.loaded ? 'Loaded' : 'Not Available'}
+            Model Status: {modelAvailable ? 'Available' : 'Not Available'}
           </div>
         </div>
-        {!modelInfo?.loaded && (
+        {modelAvailable ? (
+          <div style={{ fontSize: 13, color: '#065f46', marginTop: 8 }}>
+            {modelType === 'multi_crop' ? 'Multi-crop model' : 'Single-crop model'} loaded
+            {modelInfo?.model_version && ` (${modelInfo.model_version})`}
+            {modelInfo?.channels && ` - ${modelInfo.channels} channels`}
+          </div>
+        ) : (
           <div style={{ fontSize: 13, color: '#92400e', marginTop: 8 }}>
-            No trained model found. Train a model using the TOM2024 dataset to enable ML-based classification.
+            No trained model found. Train a model to enable ML-based classification.
           </div>
         )}
       </div>
 
       {/* Model Information */}
-      {modelInfo?.loaded && (
+      {modelAvailable && (
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: 12,
           marginBottom: 20
         }}>
-          {modelInfo.version && (
+          <div style={{
+            padding: 16,
+            background: '#f9fafb',
+            borderRadius: 8,
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
+              Model Type
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#111827', textTransform: 'capitalize' }}>
+              {modelType.replace('_', ' ')}
+            </div>
+          </div>
+
+          {modelInfo?.model_version && (
             <div style={{
               padding: 16,
               background: '#f9fafb',
@@ -78,56 +130,24 @@ export default function ModelTraining() {
               <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
                 Model Version
               </div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#111827', wordBreak: 'break-word' }}>
+                {modelInfo.model_version}
+              </div>
+            </div>
+          )}
+
+          {modelInfo?.channels && (
+            <div style={{
+              padding: 16,
+              background: '#f9fafb',
+              borderRadius: 8,
+              border: '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
+                Channels
+              </div>
               <div style={{ fontSize: 18, fontWeight: 600, color: '#111827' }}>
-                {modelInfo.version}
-              </div>
-            </div>
-          )}
-
-          {modelInfo.lastTrained && (
-            <div style={{
-              padding: 16,
-              background: '#f9fafb',
-              borderRadius: 8,
-              border: '1px solid #e5e7eb'
-            }}>
-              <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-                Last Trained
-              </div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
-                {new Date(modelInfo.lastTrained).toLocaleDateString()}
-              </div>
-            </div>
-          )}
-
-          {modelInfo.accuracy !== null && (
-            <div style={{
-              padding: 16,
-              background: '#f9fafb',
-              borderRadius: 8,
-              border: '1px solid #e5e7eb'
-            }}>
-              <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-                Test Accuracy
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 600, color: '#059669' }}>
-                {(modelInfo.accuracy * 100).toFixed(1)}%
-              </div>
-            </div>
-          )}
-
-          {modelInfo.datasetSize && (
-            <div style={{
-              padding: 16,
-              background: '#f9fafb',
-              borderRadius: 8,
-              border: '1px solid #e5e7eb'
-            }}>
-              <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-                Training Dataset
-              </div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
-                {modelInfo.datasetSize.toLocaleString()} images
+                {modelInfo.channels}
               </div>
             </div>
           )}
@@ -144,50 +164,117 @@ export default function ModelTraining() {
         <div style={{ fontWeight: 600, marginBottom: 12, color: '#111827' }}>
           How to Train the Model
         </div>
-        <ol style={{ 
-          margin: 0, 
-          paddingLeft: 20, 
-          color: '#374151',
-          lineHeight: 1.8,
-          fontSize: 13
-        }}>
-          <li>Prepare the TOM2024 dataset:
-            <pre style={{
-              marginTop: 8,
-              padding: 12,
-              background: '#1f2937',
-              color: '#f9fafb',
-              borderRadius: 6,
-              fontSize: 11,
-              overflow: 'auto'
+        {!modelAvailable ? (
+          <div>
+            <p style={{ fontSize: 13, color: '#374151', marginBottom: 12, lineHeight: 1.6 }}>
+              To enable ML-based crop health classification, train a multi-crop model using the training script:
+            </p>
+            <ol style={{ 
+              margin: 0, 
+              paddingLeft: 20, 
+              color: '#374151',
+              lineHeight: 1.8,
+              fontSize: 13
             }}>
-{`python prepare_tom2024_data.py \\
-  ~/Downloads/TOM2024 \\
-  ./training_data \\
-  --use-ndvi`}
-            </pre>
-          </li>
-          <li>Train the model:
-            <pre style={{
-              marginTop: 8,
-              padding: 12,
-              background: '#1f2937',
-              color: '#f9fafb',
-              borderRadius: 6,
-              fontSize: 11,
-              overflow: 'auto'
+              <li style={{ marginBottom: 12 }}>
+                <strong>Prepare training data:</strong> Organize your training images in a directory structure with crop types and health labels.
+              </li>
+              <li style={{ marginBottom: 12 }}>
+                <strong>Train the multi-crop model:</strong>
+                <pre style={{
+                  marginTop: 8,
+                  padding: 12,
+                  background: '#1f2937',
+                  color: '#f9fafb',
+                  borderRadius: 6,
+                  fontSize: 11,
+                  overflow: 'auto'
+                }}>
+{`cd python_processing
+python train_multi_crop_model_v2.py \\
+  --data-dir ./training_data \\
+  --output-dir ./models/multi_crop \\
+  --epochs 50`}
+                </pre>
+              </li>
+              <li style={{ marginBottom: 12 }}>
+                <strong>Configure the worker:</strong> Set environment variables on EC2:
+                <pre style={{
+                  marginTop: 8,
+                  padding: 12,
+                  background: '#1f2937',
+                  color: '#f9fafb',
+                  borderRadius: 6,
+                  fontSize: 11,
+                  overflow: 'auto'
+                }}>
+{`USE_MULTI_CROP_MODEL=true
+MULTI_CROP_MODEL_DIR=./models/multi_crop
+MODEL_CHANNELS=3`}
+                </pre>
+              </li>
+              <li>
+                <strong>Restart the background worker</strong> to load the new model. The trained model will be saved to <code>./models/multi_crop/</code>
+              </li>
+            </ol>
+          </div>
+        ) : (
+          <div>
+            <p style={{ fontSize: 13, color: '#374151', marginBottom: 12, lineHeight: 1.6 }}>
+              Model is available and ready for predictions. To update or retrain:
+            </p>
+            <ol style={{ 
+              margin: 0, 
+              paddingLeft: 20, 
+              color: '#374151',
+              lineHeight: 1.8,
+              fontSize: 13
             }}>
-{`python train_model.py \\
-  ./training_data/train \\
-  ./models \\
-  50`}
-            </pre>
-          </li>
-          <li>The trained model will be saved to <code>./models/onion_crop_health_model.h5</code></li>
-          <li>Restart the background worker to use the new model</li>
-        </ol>
+              <li style={{ marginBottom: 12 }}>
+                Follow the training steps above to create a new model
+              </li>
+              <li>
+                Restart the background worker to load the updated model
+              </li>
+            </ol>
+            {modelInfo?.model_path && (
+              <div style={{ 
+                marginTop: 12, 
+                padding: 8, 
+                background: '#eff6ff', 
+                borderRadius: 4,
+                fontSize: 12,
+                color: '#1e40af'
+              }}>
+                <strong>Current model path:</strong> {modelInfo.model_path}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Worker Configuration Info (for debugging) */}
+      {workerConfig && Object.keys(workerConfig).length > 0 && (
+        <details style={{
+          marginTop: 16,
+          padding: 12,
+          background: '#f9fafb',
+          borderRadius: 6,
+          border: '1px solid #e5e7eb',
+          fontSize: 12
+        }}>
+          <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#6b7280' }}>
+            Worker Configuration
+          </summary>
+          <div style={{ marginTop: 8, fontFamily: 'monospace', fontSize: 11 }}>
+            {Object.entries(workerConfig).map(([key, value]) => (
+              <div key={key} style={{ marginBottom: 4 }}>
+                <strong>{key}:</strong> {String(value || 'not set')}
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 }
-
