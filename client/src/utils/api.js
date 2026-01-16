@@ -6,17 +6,33 @@
 /**
  * Resolve API base URL depending on environment
  * - Development: always use local server
- * - Production: prefer VITE_API_URL, otherwise use relative paths (Netlify redirects)
+ * - Production: 
+ *   - If VITE_API_URL is set and is HTTPS, use it directly
+ *   - Otherwise, use relative paths (empty string) to leverage Netlify proxy
+ *   - This avoids mixed content errors (HTTPS frontend calling HTTP backend)
  */
 const getApiBaseUrl = () => {
   if (import.meta.env.DEV) {
     return 'http://localhost:5050';
   }
-  // If a production override exists, use it (must be HTTPS when served from Netlify)
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+  
+  // In production, check if VITE_API_URL is explicitly set
+  const viteApiUrl = import.meta.env.VITE_API_URL;
+  if (viteApiUrl) {
+    // Only use it if it's HTTPS (to avoid mixed content errors)
+    if (viteApiUrl.startsWith('https://')) {
+      return viteApiUrl;
+    }
+    // If HTTP is provided, warn and fall back to relative paths (Netlify proxy)
+    console.warn(
+      'VITE_API_URL is set to HTTP, but frontend is served over HTTPS. ' +
+      'Using relative paths (Netlify proxy) to avoid mixed content errors. ' +
+      'Set VITE_API_URL to HTTPS or leave it unset to use Netlify proxy.'
+    );
   }
+  
   // Default to same-origin requests so Netlify redirects/proxies can handle HTTPS
+  // This allows the frontend (HTTPS) to call the backend (HTTP) via Netlify's proxy
   return '';
 };
 
@@ -76,13 +92,29 @@ export const api = {
       
       return response.json();
     } catch (error) {
+      // Enhanced error logging for debugging
+      const errorDetails = {
+        message: error.message,
+        name: error.name,
+        url: url,
+        endpoint: endpoint,
+        apiBaseUrl: API_URL || '(using relative paths)',
+        isProduction: !import.meta.env.DEV,
+        isNetlify: window.location.hostname.includes('netlify.app'),
+        origin: window.location.origin,
+        timestamp: new Date().toISOString()
+      };
+      
       console.error('API GET Error:', error);
+      console.error('Error Details:', errorDetails);
       console.error('Failed URL:', url);
       
       // Provide helpful error message for connection failures
       if (error.message === 'Failed to fetch' || 
           error.name === 'TypeError' || 
-          error.message.includes('fetch')) {
+          error.message.includes('fetch') ||
+          error.message.includes('NetworkError') ||
+          error.message.includes('CORS')) {
         
         // Check if we're in production (Netlify)
         const isProduction = !import.meta.env.DEV;
@@ -90,9 +122,12 @@ export const api = {
         
         let helpfulMessage;
         if (isProduction && isNetlify) {
-          helpfulMessage = `Cannot connect to backend server. ` +
-            `The backend may be down or CORS is misconfigured. ` +
-            `Check that the backend server is running and allows requests from ${window.location.origin}`;
+          helpfulMessage = `Cannot connect to backend server at ${url}. ` +
+            `Possible causes: ` +
+            `1) Backend server is down or not accessible, ` +
+            `2) CORS is misconfigured (backend must allow ${window.location.origin}), ` +
+            `3) Netlify proxy is not working (check netlify.toml redirects). ` +
+            `Check browser console and network tab for details.`;
         } else {
           helpfulMessage = `Cannot connect to backend server at ${url}. ` +
             `Please ensure the backend server is running on port 5050. ` +
@@ -103,6 +138,7 @@ export const api = {
         helpfulError.name = 'ConnectionError';
         helpfulError.originalError = error;
         helpfulError.url = url;
+        helpfulError.details = errorDetails;
         throw helpfulError;
       }
       
@@ -155,20 +191,46 @@ export const api = {
       
       return response.json();
     } catch (error) {
+      // Enhanced error logging for debugging
+      const errorDetails = {
+        message: error.message,
+        name: error.name,
+        url: url,
+        endpoint: endpoint,
+        apiBaseUrl: API_URL || '(using relative paths)',
+        isProduction: !import.meta.env.DEV,
+        isNetlify: window.location.hostname.includes('netlify.app'),
+        origin: window.location.origin,
+        timestamp: new Date().toISOString()
+      };
+      
       console.error('API POST Error:', error);
+      console.error('Error Details:', errorDetails);
       console.error('Failed URL:', url);
       
       // Handle connection errors
       if (error.message === 'Failed to fetch' || 
           error.name === 'TypeError' || 
-          error.message.includes('fetch')) {
-        const helpfulError = new Error(
-          `Cannot connect to backend server at ${url}. ` +
-          `Check network connection and CORS configuration.`
-        );
+          error.message.includes('fetch') ||
+          error.message.includes('NetworkError') ||
+          error.message.includes('CORS')) {
+        const isProduction = !import.meta.env.DEV;
+        const isNetlify = window.location.hostname.includes('netlify.app');
+        
+        let helpfulMessage;
+        if (isProduction && isNetlify) {
+          helpfulMessage = `Cannot connect to backend server at ${url}. ` +
+            `Check network connection, CORS configuration, and Netlify proxy settings.`;
+        } else {
+          helpfulMessage = `Cannot connect to backend server at ${url}. ` +
+            `Check network connection and CORS configuration.`;
+        }
+        
+        const helpfulError = new Error(helpfulMessage);
         helpfulError.name = 'ConnectionError';
         helpfulError.originalError = error;
         helpfulError.url = url;
+        helpfulError.details = errorDetails;
         throw helpfulError;
       }
       
@@ -225,20 +287,46 @@ export const api = {
       
       return response.json();
     } catch (error) {
+      // Enhanced error logging for debugging
+      const errorDetails = {
+        message: error.message,
+        name: error.name,
+        url: url,
+        endpoint: endpoint,
+        apiBaseUrl: API_URL || '(using relative paths)',
+        isProduction: !import.meta.env.DEV,
+        isNetlify: window.location.hostname.includes('netlify.app'),
+        origin: window.location.origin,
+        timestamp: new Date().toISOString()
+      };
+      
       console.error('API Upload Error:', error);
+      console.error('Error Details:', errorDetails);
       console.error('Failed URL:', url);
       
       // Handle connection errors
       if (error.message === 'Failed to fetch' || 
           error.name === 'TypeError' || 
-          error.message.includes('fetch')) {
-        const helpfulError = new Error(
-          `Cannot connect to backend server at ${url}. ` +
-          `Check network connection and CORS configuration.`
-        );
+          error.message.includes('fetch') ||
+          error.message.includes('NetworkError') ||
+          error.message.includes('CORS')) {
+        const isProduction = !import.meta.env.DEV;
+        const isNetlify = window.location.hostname.includes('netlify.app');
+        
+        let helpfulMessage;
+        if (isProduction && isNetlify) {
+          helpfulMessage = `Cannot connect to backend server at ${url}. ` +
+            `Check network connection, CORS configuration, and Netlify proxy settings.`;
+        } else {
+          helpfulMessage = `Cannot connect to backend server at ${url}. ` +
+            `Check network connection and CORS configuration.`;
+        }
+        
+        const helpfulError = new Error(helpfulMessage);
         helpfulError.name = 'ConnectionError';
         helpfulError.originalError = error;
         helpfulError.url = url;
+        helpfulError.details = errorDetails;
         throw helpfulError;
       }
       

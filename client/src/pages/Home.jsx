@@ -4,10 +4,31 @@ import { api, buildImageUrl, formatDate } from '../utils/api.js';
 export default function HomePage() {
   const [images, setImages] = useState([]);
   const [telemetry, setTelemetry] = useState(null);
+  const [backendStatus, setBackendStatus] = useState('checking'); // 'checking' | 'online' | 'offline'
 
   useEffect(() => {
     let intervalId = null;
     let isFetching = false;
+    
+    // Health check function
+    const checkBackendHealth = async () => {
+      try {
+        const health = await api.get('/api/health');
+        if (health && health.status === 'ok') {
+          setBackendStatus('online');
+          console.log('✓ Backend health check passed:', health);
+        } else {
+          setBackendStatus('offline');
+          console.warn('⚠️ Backend health check returned unexpected response:', health);
+        }
+      } catch (error) {
+        setBackendStatus('offline');
+        console.error('✗ Backend health check failed:', error);
+      }
+    };
+    
+    // Run health check once on mount
+    checkBackendHealth();
     
     const fetchData = async () => {
       if (document.hidden || isFetching) return;
@@ -27,8 +48,14 @@ export default function HomePage() {
         const imagesArray = Array.isArray(imgs) ? imgs : (imgs?.images || []);
         setImages(imagesArray);
         setTelemetry(tel);
+        
+        // Update backend status based on successful API calls
+        if (imagesArray.length >= 0 || tel !== null) {
+          setBackendStatus('online');
+        }
       } catch (e) {
         console.error('Error fetching data:', e);
+        setBackendStatus('offline');
       } finally {
         isFetching = false;
       }
@@ -108,9 +135,20 @@ export default function HomePage() {
       <div className="container-grid">
         <div>
           <div className="card card-elevated animate-fade-in-up" style={{ marginBottom: 'var(--space-6)' }}>
-            <h2 className="section-title" style={{ marginBottom: 'var(--space-4)' }}>
-              Welcome to Precision Agriculture
-            </h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 'var(--space-4)' }}>
+              <h2 className="section-title" style={{ margin: 0 }}>
+                Welcome to Precision Agriculture
+              </h2>
+              {backendStatus !== 'checking' && (
+                <span 
+                  className={`badge badge-${backendStatus === 'online' ? 'success' : 'error'}`}
+                  style={{ fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-1)' }}
+                  title={backendStatus === 'online' ? 'Backend is reachable' : 'Backend connection failed'}
+                >
+                  {backendStatus === 'online' ? '✓ Backend Online' : '✗ Backend Offline'}
+                </span>
+              )}
+            </div>
             <p style={{ 
               margin: 0, 
               color: 'var(--color-text-secondary)', 
@@ -121,6 +159,19 @@ export default function HomePage() {
               Upload field imagery for real-time NDVI analysis, stress zone detection, 
               and comprehensive agricultural intelligence.
             </p>
+            {backendStatus === 'offline' && import.meta.env.DEV && (
+              <div style={{ 
+                marginTop: 'var(--space-4)', 
+                padding: 'var(--space-3)', 
+                background: 'var(--color-bg-warning)', 
+                borderRadius: 'var(--radius-md)',
+                fontSize: 'var(--font-size-sm)',
+                color: 'var(--color-text-warning)'
+              }}>
+                <strong>Debug Info:</strong> Backend connection failed. Check console for details. 
+                In production, verify Netlify proxy and CORS configuration.
+              </div>
+            )}
           </div>
 
           <div className="card card-elevated animate-fade-in-up stagger-1">

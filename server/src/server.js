@@ -334,8 +334,8 @@ app.post('/api/telemetry', async (req, res) => {
   }
 });
 
-app.listen(PORT, async () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', async () => {
+  console.log(`Server listening on http://0.0.0.0:${PORT} (accessible from external connections)`);
   
   // Check database connection
   const dbStatus = await testConnection();
