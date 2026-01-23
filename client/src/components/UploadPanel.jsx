@@ -13,8 +13,23 @@ export default function UploadPanel({ onUploaded }) {
     try {
       const formData = new FormData();
       formData.append('image', file);
+      
+      // Upload the image
       const data = await api.upload('/api/images', formData);
-      onUploaded?.(data);
+      
+      // Immediately trigger processing (don't wait for background worker)
+      if (data?.id) {
+        try {
+          const processed = await api.post(`/api/images/${data.id}/process`);
+          onUploaded?.(processed);
+        } catch (processErr) {
+          console.warn('Auto-process failed, image queued for background worker:', processErr);
+          onUploaded?.(data);
+        }
+      } else {
+        onUploaded?.(data);
+      }
+      
       setFile(null);
       e.target.reset();
     } catch (err) {

@@ -259,6 +259,26 @@ export default function AnalyticsPage() {
                 uploadedAt={selectedImage.createdAt}
                 processedAt={selectedImage.processedAt}
               />
+              
+              {/* Reprocess button for stuck images */}
+              {(selectedImage.processingStatus === 'uploaded' || selectedImage.processingStatus === 'processing' || selectedImage.processingStatus === 'failed') && (
+                <div style={{ marginBottom: 16 }}>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const processed = await api.post(`/api/images/${selectedImage.id}/process`);
+                        setImages(prev => prev.map(img => img.id === processed.id ? processed : img));
+                      } catch (err) {
+                        alert('Processing failed: ' + (err.message || 'Unknown error'));
+                      }
+                    }}
+                    className="btn btn-primary"
+                    style={{ width: '100%' }}
+                  >
+                    🔄 Process Now
+                  </button>
+                </div>
+              )}
 
               {/* Tabs */}
               <div style={{ 
