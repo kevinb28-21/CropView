@@ -66,37 +66,75 @@ export default function ModelTraining() {
     <div>
       {/* Model Status */}
       <div style={{
-        padding: 16,
-        background: modelAvailable ? '#d1fae5' : '#fef3c7',
-        border: `1px solid ${modelAvailable ? '#059669' : '#f59e0b'}`,
-        borderRadius: 8,
-        marginBottom: 20
+        padding: 'var(--space-6)',
+        background: modelAvailable ? 'var(--color-success-bg)' : 'var(--color-warning-bg)',
+        border: `1px solid ${modelAvailable ? 'var(--color-success)' : 'var(--color-warning)'}`,
+        borderRadius: 'var(--radius-2xl)',
+        marginBottom: 'var(--space-6)',
+        position: 'relative',
+        overflow: 'hidden',
+        boxShadow: var(--shadow-sm)
       }}>
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          gap: 8,
-          marginBottom: 8
+          gap: 'var(--space-3)',
+          marginBottom: 'var(--space-3)'
         }}>
-          <span style={{ fontSize: 20 }}>
+          <div style={{ 
+            width: 40, 
+            height: 40, 
+            borderRadius: 'var(--radius-full)',
+            background: modelAvailable ? 'var(--color-success)' : 'var(--color-warning)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: 20,
+            boxShadow: 'var(--shadow-md)'
+          }}>
             {modelAvailable ? '✓' : '⚠'}
-          </span>
-          <div style={{ fontWeight: 600, color: '#111827' }}>
-            Model Status: {modelAvailable ? 'Available' : 'Not Available'}
+          </div>
+          <div>
+            <div style={{ 
+              fontWeight: 'var(--font-weight-bold)', 
+              color: 'var(--color-text-primary)',
+              fontFamily: 'var(--font-display)',
+              fontSize: 'var(--font-size-lg)'
+            }}>
+              Model Status: {modelAvailable ? 'System Ready' : 'Optimization Required'}
+            </div>
+            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', textTransform: 'uppercase', letterSpacing: 'var(--letter-spacing-wider)' }}>
+              {modelAvailable ? 'Neural Network Operational' : 'Offline Mode Active'}
+            </div>
           </div>
         </div>
         {modelAvailable ? (
-          <div style={{ fontSize: 13, color: '#065f46', marginTop: 8, lineHeight: 1.6 }}>
-            {modelType === 'multi_crop' ? 'Multi-crop model' : 'Single-crop model'} ready for inference
-            {modelInfo?.model_version && ` (v${modelInfo.model_version})`}
-            {modelInfo?.channels && ` • ${modelInfo.channels}-channel input`}
-            <div style={{ marginTop: 4, fontSize: 12, opacity: 0.9 }}>
-              The model analyzes crop health using vegetation indices (NDVI, SAVI, GNDVI)
+          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginTop: 'var(--space-4)', lineHeight: 'var(--line-height-relaxed)' }}>
+            <span style={{ 
+              display: 'inline-block', 
+              padding: '2px 8px', 
+              background: 'var(--color-primary)', 
+              color: 'white', 
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--font-size-xs)',
+              marginRight: 8
+            }}>
+              {modelType === 'multi_crop' ? 'MULTI-CROP ENGINE' : 'SINGLE-CROP ENGINE'}
+            </span>
+            Neural network v{modelInfo?.model_version || '1.0.0'} is currently analyzing image streams.
+            {modelInfo?.channels && (
+              <span style={{ marginLeft: 8 }}>
+                Processing <strong>{modelInfo.channels} spectral channels</strong>.
+              </span>
+            )}
+            <div style={{ marginTop: 'var(--space-3)', fontSize: 'var(--font-size-xs)', fontStyle: 'italic', opacity: 0.8 }}>
+              Using sensor-fusion logic to correlate vegetation indices with morphological health markers.
             </div>
           </div>
         ) : (
-          <div style={{ fontSize: 13, color: '#92400e', marginTop: 8, lineHeight: 1.6 }}>
-            No trained model detected. The system uses vegetation index analysis for crop health assessment.
+          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-warning-text)', marginTop: 'var(--space-4)', lineHeight: 'var(--line-height-relaxed)' }}>
+            No deep learning model detected. System is currently operating in <strong>Heuristic Fallback Mode</strong> using direct vegetation index analysis (NDVI/SAVI).
           </div>
         )}
       </div>
@@ -105,52 +143,31 @@ export default function ModelTraining() {
       {modelAvailable && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 12,
-          marginBottom: 20
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: 'var(--space-4)',
+          marginBottom: 'var(--space-6)'
         }}>
-          <div style={{
-            padding: 16,
-            background: '#f9fafb',
-            borderRadius: 8,
-            border: '1px solid #e5e7eb'
-          }}>
-            <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-              Model Type
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#111827', textTransform: 'capitalize' }}>
+          <div className="metric" style={{ padding: 'var(--space-4)' }}>
+            <div className="metric-label">Model Engine</div>
+            <div style={{ fontSize: 'var(--font-size-base)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-primary)', textTransform: 'capitalize' }}>
               {modelType.replace('_', ' ')}
             </div>
           </div>
 
           {modelInfo?.model_version && (
-            <div style={{
-              padding: 16,
-              background: '#f9fafb',
-              borderRadius: 8,
-              border: '1px solid #e5e7eb'
-            }}>
-              <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-                Model Version
-              </div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#111827', wordBreak: 'break-word' }}>
+            <div className="metric" style={{ padding: 'var(--space-4)' }}>
+              <div className="metric-label">Release Version</div>
+              <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-primary)', wordBreak: 'break-word' }}>
                 {modelInfo.model_version}
               </div>
             </div>
           )}
 
           {modelInfo?.channels && (
-            <div style={{
-              padding: 16,
-              background: '#f9fafb',
-              borderRadius: 8,
-              border: '1px solid #e5e7eb'
-            }}>
-              <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-                Channels
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 600, color: '#111827' }}>
-                {modelInfo.channels}
+            <div className="metric" style={{ padding: 'var(--space-4)' }}>
+              <div className="metric-label">Neural Inputs</div>
+              <div style={{ fontSize: 'var(--font-size-xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-primary)' }}>
+                {modelInfo.channels} Channels
               </div>
             </div>
           )}
@@ -158,14 +175,9 @@ export default function ModelTraining() {
       )}
 
       {/* Training Instructions */}
-      <div style={{
-        padding: 16,
-        background: '#f9fafb',
-        borderRadius: 8,
-        border: '1px solid #e5e7eb'
-      }}>
-        <div style={{ fontWeight: 600, marginBottom: 12, color: '#111827' }}>
-          How to Train the Model
+      <div className="card" style={{ background: 'var(--color-bg-tertiary)', border: 'none' }}>
+        <div className="section-title" style={{ fontSize: 'var(--font-size-sm)' }}>
+          System Configuration Guidelines
         </div>
         {!modelAvailable ? (
           <div>

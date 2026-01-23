@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api, formatDate } from '../utils/api.js';
+import Modal from '../components/Modal.jsx';
 
 export default function DronePage() {
   const [telemetry, setTelemetry] = useState(null);
@@ -8,6 +9,48 @@ export default function DronePage() {
   const [schedules, setSchedules] = useState([]);
   const [flightHistory, setFlightHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newSchedule, setNewSchedule] = useState({
+    name: '',
+    time: '09:00',
+    duration: '20',
+    area: 'North Field',
+    priority: 'Medium',
+    daysFromNow: '1'
+  });
+
+  const handleCreateSchedule = (e) => {
+    e.preventDefault();
+    
+    const date = new Date();
+    date.setDate(date.getDate() + parseInt(newSchedule.daysFromNow || '1', 10));
+    
+    const scheduleToAdd = {
+      id: schedules.length + 1,
+      name: newSchedule.name,
+      time: newSchedule.time,
+      date: date.toISOString(),
+      duration: parseInt(newSchedule.duration, 10),
+      area: newSchedule.area,
+      status: 'Scheduled',
+      priority: newSchedule.priority.charAt(0).toUpperCase() + newSchedule.priority.slice(1).toLowerCase()
+    };
+    
+    setSchedules([...schedules, scheduleToAdd]);
+    setIsModalOpen(false);
+    
+    // Reset form
+    setNewSchedule({
+      name: '',
+      time: '09:00',
+      duration: '20',
+      area: 'North Field',
+      priority: 'Medium',
+      daysFromNow: '1'
+    });
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -411,40 +454,7 @@ export default function DronePage() {
             <h3 className="section-title" style={{ marginBottom: 0 }}>Flight Schedule</h3>
             <button 
               className="btn btn-primary btn-sm"
-              onClick={() => {
-                const name = prompt('Schedule Name:');
-                if (!name) return;
-                
-                const time = prompt('Time (HH:MM):', '09:00');
-                if (!time) return;
-                
-                const duration = prompt('Duration (minutes):', '20');
-                if (!duration) return;
-                
-                const area = prompt('Area:', 'North Field');
-                if (!area) return;
-                
-                const priority = prompt('Priority (High/Medium/Low):', 'Medium');
-                if (!priority) return;
-                
-                const daysFromNow = prompt('Days from now:', '1');
-                const date = new Date();
-                date.setDate(date.getDate() + parseInt(daysFromNow || '1', 10));
-                
-                const newSchedule = {
-                  id: schedules.length + 1,
-                  name,
-                  time,
-                  date: date.toISOString(),
-                  duration: parseInt(duration, 10),
-                  area,
-                  status: 'Scheduled',
-                  priority: priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase()
-                };
-                
-                setSchedules([...schedules, newSchedule]);
-                alert(`Schedule "${name}" created successfully!`);
-              }}
+              onClick={() => setIsModalOpen(true)}
             >
               + New Schedule
             </button>
@@ -583,6 +593,94 @@ export default function DronePage() {
           </div>
         )}
       </div>
+      
+      {/* Schedule Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Create Flight Schedule"
+        footer={
+          <>
+            <button className="btn btn-secondary btn-sm" onClick={() => setIsModalOpen(false)}>Cancel</button>
+            <button className="btn btn-primary btn-sm" onClick={handleCreateSchedule}>Create Schedule</button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreateSchedule}>
+          <div className="form-group">
+            <label className="form-label">Schedule Name</label>
+            <input 
+              type="text" 
+              className="form-input" 
+              placeholder="e.g. Morning Field Survey"
+              value={newSchedule.name}
+              onChange={(e) => setNewSchedule({...newSchedule, name: e.target.value})}
+              required
+            />
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+            <div className="form-group">
+              <label className="form-label">Time (HH:MM)</label>
+              <input 
+                type="time" 
+                className="form-input" 
+                value={newSchedule.time}
+                onChange={(e) => setNewSchedule({...newSchedule, time: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Days from Now</label>
+              <input 
+                type="number" 
+                min="0"
+                className="form-input" 
+                value={newSchedule.daysFromNow}
+                onChange={(e) => setNewSchedule({...newSchedule, daysFromNow: e.target.value})}
+                required
+              />
+            </div>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+            <div className="form-group">
+              <label className="form-label">Duration (min)</label>
+              <input 
+                type="number" 
+                className="form-input" 
+                value={newSchedule.duration}
+                onChange={(e) => setNewSchedule({...newSchedule, duration: e.target.value})}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Priority</label>
+              <select 
+                className="form-input form-select"
+                value={newSchedule.priority}
+                onChange={(e) => setNewSchedule({...newSchedule, priority: e.target.value})}
+              >
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label className="form-label">Area / Field</label>
+            <input 
+              type="text" 
+              className="form-input" 
+              placeholder="e.g. North Field"
+              value={newSchedule.area}
+              onChange={(e) => setNewSchedule({...newSchedule, area: e.target.value})}
+              required
+            />
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

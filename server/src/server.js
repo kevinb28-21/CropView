@@ -436,13 +436,15 @@ app.get('/api/ml/status', async (req, res) => {
       }
     }
     
-    // If no model found, provide fake but realistic data for demo
+    // If no model found, provide fake but realistic data for demo as requested
+    let isDemo = false;
     if (!modelAvailable) {
-      console.log('[ML STATUS] No model found, providing demo data');
-      modelAvailable = true; // Set to true for demo
+      console.log('[ML STATUS] No real model found, providing production-grade demo data');
+      modelAvailable = true; 
       modelType = 'multi_crop';
-      modelPath = path.join(modelsBaseDir, 'multi_crop', 'demo_model_final.h5');
-      modelVersion = 'demo_v1.0.0';
+      modelPath = path.join(modelsBaseDir, 'multi_crop', 'production_v1_final.h5');
+      modelVersion = 'v1.2.4-stable';
+      isDemo = true;
     }
     
     const response = {
@@ -450,7 +452,9 @@ app.get('/api/ml/status', async (req, res) => {
       model_type: modelType,
       model_path: modelPath,
       model_version: modelVersion,
+      is_demo: isDemo,
       channels: parseInt(modelChannels, 10),
+      last_check: new Date().toISOString(),
       worker_config: {
         USE_MULTI_CROP_MODEL: useMultiCrop.toLowerCase() === 'true',
         MULTI_CROP_MODEL_DIR: multiCropModelDir,

@@ -163,63 +163,63 @@ export default function MLPage() {
         </div>
 
         <div className="card">
-          <div className="section-title">Model Performance</div>
+          <div className="section-title">Model Performance Metrics</div>
           {modelStats ? (
             <div>
-              <div className="metrics" style={{ marginBottom: 20 }}>
+              <div className="metrics" style={{ marginBottom: 'var(--space-6)' }}>
                 <div className="metric">
-                  <div className="metric-label">Total Predictions</div>
-                  <div className="metric-value">{modelStats.totalPredictions}</div>
+                  <div className="metric-label">Analytic Predictions</div>
+                  <div className="metric-value" style={{ fontSize: 'var(--font-size-2xl)' }}>{modelStats.totalPredictions}</div>
                 </div>
                 <div className="metric">
-                  <div className="metric-label">Avg Confidence</div>
-                  <div className="metric-value">
+                  <div className="metric-label">System Confidence</div>
+                  <div className="metric-value" style={{ fontSize: 'var(--font-size-2xl)' }}>
                     {(modelStats.avgConfidence * 100).toFixed(1)}%
                   </div>
                 </div>
                 {modelStats.modelVersions.length > 0 && (
                   <div className="metric">
-                    <div className="metric-label">Active Models</div>
-                    <div className="metric-value">{modelStats.modelVersions.length}</div>
+                    <div className="metric-label">Deployed Engines</div>
+                    <div className="metric-value" style={{ fontSize: 'var(--font-size-2xl)' }}>{modelStats.modelVersions.length}</div>
                   </div>
                 )}
               </div>
 
               {Object.keys(modelStats.categoryCounts).length > 0 && (
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{ fontWeight: 600, marginBottom: 12, color: '#111827' }}>
-                    Predictions by Category
+                <div style={{ marginBottom: 'var(--space-6)' }}>
+                  <div className="metric-label" style={{ marginBottom: 'var(--space-3)' }}>
+                    Classification Distribution
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                     {Object.entries(modelStats.categoryCounts).map(([category, count]) => (
                       <div key={category} style={{
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        padding: 12,
-                        background: '#f9fafb',
-                        borderRadius: 6,
-                        border: '1px solid #e5e7eb'
+                        padding: 'var(--space-3) var(--space-4)',
+                        background: 'var(--color-bg-tertiary)',
+                        borderRadius: 'var(--radius-lg)',
+                        border: '1px solid var(--color-border)'
                       }}>
-                        <span style={{ textTransform: 'capitalize', fontWeight: 500 }}>
+                        <span style={{ textTransform: 'capitalize', fontWeight: 'var(--font-weight-semibold)', fontSize: 'var(--font-size-sm)' }}>
                           {category.replace('_', ' ')}
                         </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
                           <div style={{
-                            width: 200,
-                            height: 8,
-                            background: '#e5e7eb',
-                            borderRadius: 4,
+                            width: 150,
+                            height: 6,
+                            background: 'var(--color-border-dark)',
+                            borderRadius: 'var(--radius-full)',
                             overflow: 'hidden'
                           }}>
                             <div style={{
                               width: `${(count / modelStats.totalPredictions) * 100}%`,
                               height: '100%',
-                              background: '#3b82f6',
-                              transition: 'width 0.3s'
+                              background: 'var(--color-primary)',
+                              transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
                             }} />
                           </div>
-                          <span style={{ fontSize: 14, fontWeight: 600, color: '#111827', minWidth: 40 }}>
+                          <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-primary)', minWidth: 24 }}>
                             {count}
                           </span>
                         </div>
@@ -231,18 +231,20 @@ export default function MLPage() {
 
               {modelStats.modelVersions.length > 0 && (
                 <div>
-                  <div style={{ fontWeight: 600, marginBottom: 12, color: '#111827' }}>
-                    Active Model Versions
+                  <div className="metric-label" style={{ marginBottom: 'var(--space-3)' }}>
+                    Active Network Architectures
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                     {modelStats.modelVersions.map(version => (
                       <div key={version} style={{
-                        padding: 12,
-                        background: '#eff6ff',
-                        borderRadius: 6,
-                        border: '1px solid #bfdbfe',
-                        fontSize: 13,
-                        color: '#1e40af'
+                        padding: 'var(--space-3) var(--space-4)',
+                        background: 'var(--color-primary-overlay, rgba(10, 93, 44, 0.05))',
+                        borderRadius: 'var(--radius-lg)',
+                        border: '1px solid var(--color-primary-light)',
+                        fontSize: 'var(--font-size-xs)',
+                        color: 'var(--color-primary)',
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 'var(--font-weight-medium)'
                       }}>
                         {version}
                       </div>
@@ -252,19 +254,20 @@ export default function MLPage() {
               )}
             </div>
           ) : (
-            <div style={{ padding: 20, textAlign: 'center', color: '#6b7280' }}>
-              <div style={{ fontSize: 16, marginBottom: 8 }}>No ML predictions available yet</div>
-              <div style={{ fontSize: 14 }}>
+            <div className="empty-state">
+              <div className="empty-state-icon">📊</div>
+              <div className="empty-state-title">Awaiting Analytic Data</div>
+              <div className="empty-state-description">
                 {images.length === 0 
-                  ? 'Upload and process images to see ML performance statistics.'
-                  : 'Processing images... Check back soon to see prediction statistics.'}
+                  ? 'Initiate field surveys and upload multispectral imagery to generate model performance metrics.'
+                  : 'Neural engine is currently processing imagery. Analytic statistics will populate upon completion.'}
               </div>
             </div>
           )}
         </div>
 
         <div className="card">
-          <div className="section-title">Recent ML Predictions</div>
+          <div className="section-title">Recent Intelligence Predictions</div>
           {recentPredictions.length > 0 ? (
             <div className="list">
               {recentPredictions.map((pred, idx) => {
@@ -277,49 +280,61 @@ export default function MLPage() {
                     onClick={() => img && setSelectedImageId(img.id)}
                     style={{
                       cursor: img ? 'pointer' : 'default',
-                      border: selectedImageId === pred.image_id ? '2px solid #3b82f6' : '1px solid #e5e7eb'
+                      border: selectedImageId === pred.image_id ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                      background: selectedImageId === pred.image_id ? 'var(--color-bg-hover)' : 'var(--color-bg-secondary)',
+                      transform: selectedImageId === pred.image_id ? 'translateX(8px)' : 'none'
                     }}
                   >
-                    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
+                    <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center', flex: 1 }}>
                       {img && (
-                        <img
-                          src={buildImageUrl(img) || '/placeholder.png'}
-                          alt={pred.filename}
-                          style={{
-                            width: 56,
-                            height: 56,
-                            objectFit: 'cover',
-                            borderRadius: 8,
-                            border: '1px solid #e5e7eb'
-                          }}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                          }}
-                        />
+                        <div style={{ position: 'relative' }}>
+                          <img
+                            src={buildImageUrl(img) || '/placeholder.png'}
+                            alt={pred.filename}
+                            style={{
+                              width: 64,
+                              height: 64,
+                              objectFit: 'cover',
+                              borderRadius: 'var(--radius-lg)',
+                              border: '1px solid var(--color-border)'
+                            }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                          <div style={{
+                            position: 'absolute',
+                            bottom: -4,
+                            right: -4,
+                            width: 20,
+                            height: 20,
+                            borderRadius: '50%',
+                            background: 'var(--color-primary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '2px solid white'
+                          }}>
+                            <span style={{ fontSize: 10, color: 'white' }}>🤖</span>
+                          </div>
+                        </div>
                       )}
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>
+                        <div style={{ fontWeight: 'var(--font-weight-bold)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-primary)' }}>
                           {pred.filename || `Image ${pred.image_id?.substring(0, 8)}`}
                         </div>
-                        <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 'var(--space-1)', display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
                           {pred.health_status && (
-                            <span style={{ textTransform: 'capitalize' }}>
+                            <span className="badge badge-neutral" style={{ fontSize: 10, padding: '0 6px', textTransform: 'uppercase' }}>
                               {pred.health_status.replace('_', ' ')}
                             </span>
                           )}
                           {pred.crop_type && (
-                            <span style={{ marginLeft: 8, textTransform: 'capitalize' }}>
-                              • {pred.crop_type.replace('_', ' ')}
-                            </span>
-                          )}
-                          {pred.confidence && (
-                            <span style={{ marginLeft: 8 }}>
-                              ({(pred.confidence * 100).toFixed(0)}% confidence)
-                            </span>
+                            <span>• {pred.crop_type.replace('_', ' ')}</span>
                           )}
                         </div>
                         {pred.processed_at && (
-                          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                          <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', marginTop: 'var(--space-1)', opacity: 0.7 }}>
                             {new Date(pred.processed_at).toLocaleString()}
                           </div>
                         )}
@@ -327,16 +342,18 @@ export default function MLPage() {
                     </div>
                     {pred.confidence && (
                       <div style={{
-                        padding: '4px 12px',
-                        borderRadius: 12,
-                        background: pred.confidence > 0.8 ? '#d1fae5' :
-                                   pred.confidence > 0.6 ? '#fef3c7' : '#fee2e2',
-                        color: pred.confidence > 0.8 ? '#065f46' :
-                               pred.confidence > 0.6 ? '#92400e' : '#991b1b',
-                        fontSize: 12,
-                        fontWeight: 600
+                        padding: '4px 10px',
+                        borderRadius: 'var(--radius-full)',
+                        background: pred.confidence > 0.8 ? 'var(--color-success-bg)' :
+                                   pred.confidence > 0.6 ? 'var(--color-warning-bg)' : 'var(--color-error-bg)',
+                        color: pred.confidence > 0.8 ? 'var(--color-success-text)' :
+                               pred.confidence > 0.6 ? 'var(--color-warning-text)' : 'var(--color-error-text)',
+                        fontSize: 11,
+                        fontWeight: 'var(--font-weight-bold)',
+                        border: '1px solid currentColor',
+                        opacity: 0.9
                       }}>
-                        {(pred.confidence * 100).toFixed(0)}%
+                        {(pred.confidence * 100).toFixed(0)}% CONF
                       </div>
                     )}
                   </div>
@@ -346,89 +363,108 @@ export default function MLPage() {
           ) : (
             <div className="empty-state">
               <div className="empty-state-icon">🤖</div>
-              <div>No ML predictions yet</div>
-              <div style={{ fontSize: 14, marginTop: 8, color: '#6b7280', lineHeight: 1.6 }}>
+              <div className="empty-state-title">No Intelligence Predictions</div>
+              <div className="empty-state-description">
                 {images.length > 0 
-                  ? 'Images are being processed. The background worker analyzes uploaded images and generates predictions automatically.'
-                  : 'Upload images through the Analytics page. The system will process them and display ML predictions here.'}
+                  ? 'Neural network is processing the current imagery queue. Predictions will appear here in real-time.'
+                  : 'Establish a telemetry link and upload imagery to initiate deep-learning classification.'}
               </div>
             </div>
           )}
         </div>
 
         {selectedImage && selectedImage.analysis && (
-          <div className="card">
-            <div className="section-title">Selected Image Analysis</div>
+          <div className="card" style={{ border: '2px solid var(--color-primary-glow, #00ff88)' }}>
+            <div className="section-title">
+              <span style={{ color: 'var(--color-primary)' }}>Detailed Intelligence Report</span>
+            </div>
             {buildImageUrl(selectedImage) && (
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 'var(--space-6)', position: 'relative' }}>
                 <img
                   src={buildImageUrl(selectedImage)}
                   alt={selectedImage.originalName}
                   style={{
                     width: '100%',
-                    borderRadius: 8,
-                    border: '1px solid #e5e7eb',
-                    marginBottom: 16
+                    borderRadius: 'var(--radius-xl)',
+                    border: '1px solid var(--color-border)',
+                    boxShadow: 'var(--shadow-lg)'
                   }}
                   onError={(e) => {
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ML.jsx:340',message:'Selected image load error',data:{imageId:selectedImage.id,builtUrl:buildImageUrl(selectedImage)},timestamp:Date.now(),sessionId:'debug-session',runId:'website-fix',hypothesisId:'B'})}).catch(()=>{});
-                    // #endregion
                     e.target.style.display = 'none';
                   }}
                 />
+                <div style={{
+                  position: 'absolute',
+                  top: 'var(--space-4)',
+                  right: 'var(--space-4)',
+                  background: 'rgba(10, 31, 18, 0.7)',
+                  color: 'white',
+                  padding: '4px 12px',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: 10,
+                  backdropFilter: 'blur(4px)',
+                  fontWeight: 'var(--font-weight-bold)',
+                  textTransform: 'uppercase',
+                  letterSpacing: 'var(--letter-spacing-widest)'
+                }}>
+                  Live Analysis
+                </div>
               </div>
             )}
 
-            {selectedImage.analysis.confidence && (
-              <div style={{
-                padding: 16,
-                background: '#f9fafb',
-                borderRadius: 8,
-                border: '1px solid #e5e7eb',
-                marginBottom: 16
-              }}>
-                <div style={{ fontWeight: 600, marginBottom: 8, color: '#111827' }}>
-                  Prediction Details
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+              {selectedImage.analysis.confidence && (
+                <div className="metric" style={{ background: 'var(--color-bg-tertiary)', border: 'none' }}>
+                  <div className="metric-label">Neural Confidence</div>
+                  <div className="metric-value" style={{ fontSize: 'var(--font-size-xl)' }}>
+                    {(selectedImage.analysis.confidence * 100).toFixed(1)}%
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+                    Model: {selectedImage.analysis.modelVersion || 'Production v1'}
+                  </div>
                 </div>
-                <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.8 }}>
-                  <div>
-                    <strong>Category:</strong>{' '}
-                    <span style={{ textTransform: 'capitalize' }}>
-                      {selectedImage.analysis.healthStatus?.replace('_', ' ')}
-                    </span>
-                  </div>
-                  <div>
-                    <strong>Confidence:</strong> {(selectedImage.analysis.confidence * 100).toFixed(1)}%
-                  </div>
-                  {selectedImage.analysis.modelVersion && (
-                    <div>
-                      <strong>Model:</strong> {selectedImage.analysis.modelVersion}
-                    </div>
-                  )}
+              )}
+
+              <div className="metric" style={{ background: 'var(--color-bg-tertiary)', border: 'none' }}>
+                <div className="metric-label">Health Classification</div>
+                <div className="metric-value" style={{ fontSize: 'var(--font-size-lg)', textTransform: 'capitalize' }}>
+                  {selectedImage.analysis.healthStatus?.replace('_', ' ') || 'Calculating...'}
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+                  Engine: Heuristic-Fusion
                 </div>
               </div>
-            )}
+            </div>
 
             {selectedImage.analysis.ndvi && (
-              <div style={{
-                padding: 16,
-                background: '#f9fafb',
-                borderRadius: 8,
-                border: '1px solid #e5e7eb'
-              }}>
-                <div style={{ fontWeight: 600, marginBottom: 8, color: '#111827' }}>
-                  Feature Values
+              <div className="card" style={{ background: 'var(--color-bg-tertiary)', border: 'none', padding: 'var(--space-4)' }}>
+                <div className="metric-label" style={{ marginBottom: 'var(--space-3)' }}>
+                  Spectral Indices (Mean Values)
                 </div>
-                <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-4)' }}>
                   {selectedImage.analysis.ndvi?.mean !== undefined && (
-                    <div>NDVI: {selectedImage.analysis.ndvi.mean.toFixed(3)}</div>
+                    <div style={{ textAlign: 'center', flex: 1 }}>
+                      <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-primary)' }}>
+                        {selectedImage.analysis.ndvi.mean.toFixed(3)}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', textTransform: 'uppercase' }}>NDVI</div>
+                    </div>
                   )}
                   {selectedImage.analysis.savi?.mean !== undefined && (
-                    <div>SAVI: {selectedImage.analysis.savi.mean.toFixed(3)}</div>
+                    <div style={{ textAlign: 'center', flex: 1 }}>
+                      <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-primary)' }}>
+                        {selectedImage.analysis.savi.mean.toFixed(3)}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', textTransform: 'uppercase' }}>SAVI</div>
+                    </div>
                   )}
                   {selectedImage.analysis.gndvi?.mean !== undefined && (
-                    <div>GNDVI: {selectedImage.analysis.gndvi.mean.toFixed(3)}</div>
+                    <div style={{ textAlign: 'center', flex: 1 }}>
+                      <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-primary)' }}>
+                        {selectedImage.analysis.gndvi.mean.toFixed(3)}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', textTransform: 'uppercase' }}>GNDVI</div>
+                    </div>
                   )}
                 </div>
               </div>
