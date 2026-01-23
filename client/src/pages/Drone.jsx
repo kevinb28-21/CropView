@@ -409,7 +409,43 @@ export default function DronePage() {
         <div className="card card-elevated animate-fade-in-up stagger-2">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
             <h3 className="section-title" style={{ marginBottom: 0 }}>Flight Schedule</h3>
-            <button className="btn btn-primary btn-sm">
+            <button 
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                const name = prompt('Schedule Name:');
+                if (!name) return;
+                
+                const time = prompt('Time (HH:MM):', '09:00');
+                if (!time) return;
+                
+                const duration = prompt('Duration (minutes):', '20');
+                if (!duration) return;
+                
+                const area = prompt('Area:', 'North Field');
+                if (!area) return;
+                
+                const priority = prompt('Priority (High/Medium/Low):', 'Medium');
+                if (!priority) return;
+                
+                const daysFromNow = prompt('Days from now:', '1');
+                const date = new Date();
+                date.setDate(date.getDate() + parseInt(daysFromNow || '1', 10));
+                
+                const newSchedule = {
+                  id: schedules.length + 1,
+                  name,
+                  time,
+                  date: date.toISOString(),
+                  duration: parseInt(duration, 10),
+                  area,
+                  status: 'Scheduled',
+                  priority: priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase()
+                };
+                
+                setSchedules([...schedules, newSchedule]);
+                alert(`Schedule "${name}" created successfully!`);
+              }}
+            >
               + New Schedule
             </button>
           </div>
