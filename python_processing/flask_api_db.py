@@ -245,6 +245,36 @@ def serve_image(filename):
     return jsonify({'error': 'File not found'}), 404
 
 
+@app.route('/api/process', methods=['POST'])
+def trigger_process():
+    """
+    Trigger processing for a single image by id.
+    Called by Node after upload to start processing immediately.
+    Expects JSON body: { "image_id": "<uuid>" }
+    """
+    try:
+        data = request.get_json() or {}
+        image_id = data.get('image_id')
+        if not image_id:
+            return jsonify({'error': 'image_id required'}), 400
+
+        from db_utils import get_image_by_id
+        from background_worker import process_image
+
+        record = get_image_by_id(image_id)
+        if not record:
+            return jsonify({'error': 'Image not found'}), 404
+        if record.get('processing_status') != 'uploaded':
+            return jsonify({'message': 'Image already processed or in progress', 'status': record.get('processing_status')}), 200
+
+        ok = process_image(record)
+        if ok:
+            return jsonify({'message': 'Processing completed', 'image_id': image_id}), 200
+        return jsonify({'error': 'Processing failed'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     port = int(os.getenv('FLASK_PORT', 5001))
     debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'

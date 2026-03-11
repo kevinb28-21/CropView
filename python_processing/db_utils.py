@@ -72,7 +72,7 @@ def get_pending_images(limit: int = 10) -> List[Dict]:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
                 SELECT id, filename, original_name, file_path, s3_url, s3_key, s3_stored,
-                       captured_at, uploaded_at, processing_status
+                       captured_at, uploaded_at, processing_status, mission_id
                 FROM images
                 WHERE processing_status = 'uploaded'
                 ORDER BY uploaded_at ASC
@@ -83,7 +83,32 @@ def get_pending_images(limit: int = 10) -> List[Dict]:
             return results
     except Exception as e:
         logger.error(f"Error fetching pending images: {e}", exc_info=True)
-        return []
+            return []
+    finally:
+        if conn:
+            return_db_connection(conn)
+
+
+def get_image_by_id(image_id: str) -> Optional[Dict]:
+    """
+    Get a single image record by ID (same shape as get_pending_images for process_image).
+    Returns None if not found.
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                SELECT id, filename, original_name, file_path, s3_url, s3_key, s3_stored,
+                       captured_at, uploaded_at, processing_status, mission_id
+                FROM images
+                WHERE id = %s
+            """, (image_id,))
+            row = cur.fetchone()
+            return dict(row) if row else None
+    except Exception as e:
+        logger.error(f"Error fetching image by id: {e}", exc_info=True)
+        return None
     finally:
         if conn:
             return_db_connection(conn)

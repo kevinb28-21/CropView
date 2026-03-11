@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Map, BarChart3, Brain, Drone } from 'lucide-react';
+import { LayoutDashboard, Map, BarChart3, Brain, Drone, Lightbulb } from 'lucide-react';
 
 const navItems = [
   { to: '/', end: true, label: 'Dashboard', icon: LayoutDashboard },
@@ -12,6 +12,7 @@ const navItems = [
   { to: '/analytics', end: false, label: 'Analytics', icon: BarChart3 },
   { to: '/ml', end: false, label: 'ML Insights', icon: Brain },
   { to: '/drone', end: false, label: 'Drone', icon: Drone },
+  { to: '/insights', end: false, label: 'Insights', icon: Lightbulb },
 ];
 
 export default function Header() {

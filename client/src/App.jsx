@@ -6,6 +6,7 @@ import MapPage from './pages/Map.jsx';
 import AnalyticsPage from './pages/Analytics.jsx';
 import MLPage from './pages/ML.jsx';
 import DronePage from './pages/Drone.jsx';
+import InsightsPage from './pages/Insights.jsx';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/ml" element={<MLPage />} />
           <Route path="/drone" element={<DronePage />} />
+          <Route path="/insights" element={<InsightsPage />} />
         </Routes>
       </main>
     </BrowserRouter>

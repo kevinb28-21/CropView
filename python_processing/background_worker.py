@@ -13,7 +13,7 @@ import signal
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
-from image_processor import analyze_crop_health, calculate_savi, calculate_gndvi
+from image_processor import analyze_crop_health, calculate_savi, calculate_gndvi, append_field_profile_record
 from multispectral_loader import validate_canonical_band_order
 from db_utils import (
     get_pending_images,
@@ -496,7 +496,21 @@ def process_image(image_record: dict) -> bool:
             logger.error(f"[{image_id}] Failed to mark image as completed - marking as failed")
             set_processing_failed(image_id, "Failed to update status to completed")
             return False
-        
+
+        # Append to per-mission field profile for insights
+        try:
+            mission_id = image_record.get('mission_id')
+            captured_at = image_record.get('captured_at') or image_record.get('uploaded_at')
+            append_field_profile_record(
+                mission_id=mission_id,
+                image_id=image_id,
+                captured_at=captured_at,
+                analysis=analysis_result,
+                upload_folder=UPLOAD_FOLDER,
+            )
+        except Exception as e:
+            logger.warning(f"[{image_id}] Failed to append field profile: {e}")
+
         logger.info(f"[{image_id}] ✓ Successfully processed image - status set to 'completed'")
         return True
         

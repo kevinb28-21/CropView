@@ -979,6 +979,68 @@ def analyze_crop_health(image_path: str, use_tensorflow: bool = False,
     return analysis
 
 
+def append_field_profile_record(
+    mission_id: str,
+    image_id: str,
+    captured_at,
+    analysis: Dict,
+    upload_folder: Optional[str] = None,
+) -> None:
+    """
+    Append a summary record to the per-mission field profile JSON file.
+    Called after analysis is completed. Creates uploads/field_profiles/<mission_id>.json.
+    """
+    import os
+    if upload_folder is None:
+        upload_folder = os.getenv('UPLOAD_FOLDER', 'uploads')
+    profiles_dir = os.path.join(upload_folder, 'field_profiles')
+    os.makedirs(profiles_dir, exist_ok=True)
+    mission_key = str(mission_id) if mission_id else 'default'
+    filepath = os.path.join(profiles_dir, f'{mission_key}.json')
+
+    if captured_at is None:
+        captured_at_str = None
+    elif hasattr(captured_at, 'isoformat'):
+        captured_at_str = captured_at.isoformat()
+    else:
+        captured_at_str = str(captured_at)
+
+    health_score_raw = analysis.get('health_score')
+    if health_score_raw is not None:
+        try:
+            health_score_0_100 = min(100, max(0, float(health_score_raw) * 100))
+        except (TypeError, ValueError):
+            health_score_0_100 = None
+    else:
+        health_score_0_100 = None
+
+    record = {
+        'image_id': str(image_id),
+        'captured_at': captured_at_str,
+        'health_score': health_score_0_100,
+        'health_status': analysis.get('health_status'),
+        'ndvi_mean': analysis.get('ndvi_mean'),
+        'savi_mean': analysis.get('savi_mean'),
+        'gndvi_mean': analysis.get('gndvi_mean'),
+        'confidence': analysis.get('confidence'),
+    }
+
+    try:
+        if os.path.exists(filepath):
+            with open(filepath, 'r') as f:
+                records = json.load(f)
+            if not isinstance(records, list):
+                records = [records]
+        else:
+            records = []
+        records.append(record)
+        with open(filepath, 'w') as f:
+            json.dump(records, f, indent=2)
+        logger.debug(f"Appended field profile record for image {image_id} to {filepath}")
+    except Exception as e:
+        logger.warning(f"Failed to append field profile record: {e}")
+
+
 if __name__ == "__main__":
     # Test script
     import sys

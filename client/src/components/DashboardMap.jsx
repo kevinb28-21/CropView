@@ -6,15 +6,15 @@ import { ZoomControl, CompassControl, FullscreenControl } from './MapControls.js
 import { MouseRotation } from './MouseRotation.jsx';
 import { MapMarkerUpdater } from './MapMarkerUpdater.jsx';
 
-const droneIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  tooltipAnchor: [16, -28],
-  shadowSize: [41, 41]
+const ACCENT_HEX = '#7d8c4a';
+
+const droneIcon = L.divIcon({
+  className: 'drone-marker-icon',
+  html: `<div class="drone-marker" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:${ACCENT_HEX};"><svg viewBox="0 0 32 32" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="16" cy="16" r="10"/><line x1="16" y1="6" x2="16" y2="26"/><line x1="6" y1="16" x2="26" y2="16"/></svg></div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+  popupAnchor: [0, -16],
+  tooltipAnchor: [0, -16],
 });
 
 // Toronto coordinates
@@ -50,9 +50,9 @@ function DragRectangle({ drawMode, onDraftChange }) {
         map.removeLayer(rectangleRef.current);
       }
       rectangleRef.current = L.rectangle([latlng, latlng], {
-        color: '#7d8c4a',
+        color: ACCENT_HEX,
         weight: 2,
-        fillColor: '#7d8c4a',
+        fillColor: ACCENT_HEX,
         fillOpacity: 0.15,
         dashArray: '6 6'
       }).addTo(map);
@@ -187,16 +187,29 @@ export default function DashboardMap({
       )}
 
       {routeLatLngs.length > 1 && (
-        <Polyline pathOptions={{ color: '#7d8c4a', weight: 3 }} positions={routeLatLngs} />
+        <Polyline pathOptions={{ color: ACCENT_HEX, weight: 3 }} positions={routeLatLngs} />
       )}
 
       {geofenceLatLngs.length >= 3 && (
-        <Polygon pathOptions={{ color: '#c4a035', weight: 2, fillOpacity: 0.12 }} positions={geofenceLatLngs} />
+        <Polygon
+          pathOptions={{
+            color: ACCENT_HEX,
+            fillOpacity: 0.08,
+            weight: 1.5,
+            dashArray: '6, 4',
+          }}
+          positions={geofenceLatLngs}
+        />
       )}
 
       {Array.isArray(draftGeofence) && draftGeofence.length >= 3 && (
         <Polygon
-          pathOptions={{ color: '#7d8c4a', dashArray: '6 6', weight: 2, fillOpacity: 0.1 }}
+          pathOptions={{
+            color: ACCENT_HEX,
+            dashArray: '6, 4',
+            weight: 1.5,
+            fillOpacity: 0.08,
+          }}
           positions={draftGeofence.map(p => [p.lat, p.lng])}
         />
       )}

@@ -200,6 +200,18 @@ app.post('/api/images', upload.single('image'), async (req, res) => {
     console.log(`✓ Image ${imageId} saved to database (status: uploaded)`);
     console.log(`  Background worker will process it automatically`);
     
+    // Trigger immediate processing via Flask (fire-and-forget; do not block response)
+    const flaskProcessUrl = process.env.FLASK_PROCESS_URL || 'http://localhost:5001/api/process';
+    setImmediate(() => {
+      fetch(flaskProcessUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_id: imageId }),
+      }).catch((err) => {
+        console.error('Flask process trigger failed (worker will pick up on next poll):', err.message || err);
+      });
+    });
+    
     // Get the saved image record
     const fileRecord = await getImageById(imageId);
     
@@ -714,6 +726,114 @@ async function columnExists(tableName, columnName) {
     return false;
   }
 }
+
+// Field profiles and insights (reads from uploads/field_profiles/<mission_id>.json)
+app.get('/api/insights/:mission_id', async (req, res) => {
+  try {
+    const { mission_id } = req.params;
+    if (!mission_id || !/^[a-zA-Z0-9_-]+$/.test(mission_id)) {
+      return res.status(400).json({ error: 'Invalid mission_id' });
+    }
+    const profilesDir = path.join(UPLOAD_DIR, 'field_profiles');
+    const filePath = path.join(profilesDir, `${mission_id}.json`);
+    const resolved = path.resolve(filePath);
+    const resolvedDir = path.resolve(profilesDir);
+    if (!resolved.startsWith(resolvedDir) || !fs.existsSync(resolved)) {
+      return res.status(200).json({
+        mission_id,
+        image_count: 0,
+        avg_health_score: null,
+        ndvi_trend: 'stable',
+        dominant_status: null,
+        stress_alerts: 0,
+        recommendations: [],
+        profile_records: [],
+      });
+    }
+    const raw = fs.readFileSync(resolved, 'utf8');
+    let records = [];
+    try {
+      records = JSON.parse(raw);
+      if (!Array.isArray(records)) records = [records];
+    } catch (e) {
+      return res.status(500).json({ error: 'Invalid field profile JSON' });
+    }
+
+    const N = Math.min(records.length, 15);
+    const lastN = records.slice(-N).filter((r) => r.ndvi_mean != null);
+    let ndvi_trend = 'stable';
+    if (lastN.length >= 2) {
+      const x = lastN.map((_, i) => i);
+      const y = lastN.map((r) => Number(r.ndvi_mean));
+      const n = x.length;
+      const sumX = x.reduce((a, b) => a + b, 0);
+      const sumY = y.reduce((a, b) => a + b, 0);
+      const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
+      const sumX2 = x.reduce((a, b) => a + b * b, 0);
+      const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+      if (slope > 0.02) ndvi_trend = 'improving';
+      else if (slope < -0.02) ndvi_trend = 'declining';
+    }
+
+    const healthScores = records.map((r) => r.health_score).filter((v) => v != null);
+    const avg_health_score = healthScores.length
+      ? healthScores.reduce((a, b) => a + b, 0) / healthScores.length
+      : null;
+
+    const statusCounts = {};
+    for (const r of records) {
+      const s = r.health_status || 'unknown';
+      statusCounts[s] = (statusCounts[s] || 0) + 1;
+    }
+    let dominant_status = null;
+    let maxCount = 0;
+    for (const [s, c] of Object.entries(statusCounts)) {
+      if (c > maxCount) {
+        maxCount = c;
+        dominant_status = s;
+      }
+    }
+
+    const stress_alerts = records.filter(
+      (r) =>
+        (r.health_status && (r.health_status.toLowerCase() === 'stressed' || r.health_status.toLowerCase() === 'diseased'))
+    ).length;
+
+    const recommendations = [];
+    if (avg_health_score != null && avg_health_score < 40) {
+      recommendations.push('Critical: Majority of field shows poor health. Immediate inspection recommended.');
+    }
+    if (ndvi_trend === 'declining') {
+      recommendations.push('NDVI declining over recent captures — monitor for water stress or disease spread.');
+    }
+    if (stress_alerts > 2) {
+      recommendations.push('Multiple stressed zones detected. Review irrigation and soil conditions.');
+    }
+    if (dominant_status && dominant_status.toLowerCase() === 'weeds') {
+      recommendations.push('High weed presence detected across field. Consider targeted herbicide application.');
+    }
+    if (
+      healthScores.length > 0 &&
+      healthScores.every((s) => s >= 70)
+    ) {
+      recommendations.push('Field health is strong. Continue current management practices.');
+    }
+
+    res.json({
+      mission_id,
+      image_count: records.length,
+      avg_health_score: avg_health_score != null ? Math.round(avg_health_score * 10) / 10 : null,
+      ndvi_trend,
+      dominant_status,
+      stress_alerts,
+      recommendations,
+      profile_records: records,
+    });
+  } catch (error) {
+    console.error('Error fetching insights:', error);
+    res.status(500).json({ error: 'Failed to fetch insights', details: error.message });
+  }
+});
 
 app.listen(PORT, '0.0.0.0', async () => {
   console.log(`Server listening on http://0.0.0.0:${PORT} (accessible from external connections)`);
