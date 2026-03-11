@@ -155,6 +155,26 @@ app.post('/api/images', upload.single('image'), async (req, res) => {
     if (req.body.gps) {
       try {
         gpsData = typeof req.body.gps === 'string' ? JSON.parse(req.body.gps) : req.body.gps;
+        // Normalize common variants (lat/lng) to expected (latitude/longitude)
+        if (gpsData && typeof gpsData === 'object') {
+          if (gpsData.latitude === undefined && gpsData.lat !== undefined) {
+            gpsData.latitude = gpsData.lat;
+          }
+          if (gpsData.longitude === undefined && gpsData.lng !== undefined) {
+            gpsData.longitude = gpsData.lng;
+          }
+          if (gpsData.longitude === undefined && gpsData.lon !== undefined) {
+            gpsData.longitude = gpsData.lon;
+          }
+          // Normalize heading -> bearing if present
+          if (gpsData.bearing === undefined && gpsData.heading !== undefined) {
+            gpsData.bearing = gpsData.heading;
+          }
+          // Normalize ground_speed -> speed
+          if (gpsData.speed === undefined && gpsData.ground_speed !== undefined) {
+            gpsData.speed = gpsData.ground_speed;
+          }
+        }
         console.log('GPS metadata received:', gpsData);
       } catch (e) {
         console.warn('Failed to parse GPS data:', e);

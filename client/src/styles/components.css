@@ -1,92 +1,51 @@
 /**
- * Component Styles
- * Reusable component patterns using design tokens
+ * Component Styles — CropView Industrial Precision
+ * Cards, buttons, badges, metrics, inputs, lists — no gradients, no glow
  */
 
-/* ============================================
-   Buttons
-   ============================================ */
-
+/* ============ Buttons ============ */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-6);
-  font-family: var(--font-heading);
+  padding: var(--space-3) var(--space-5);
+  font-family: var(--font-body);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight);
-  letter-spacing: var(--letter-spacing-wide);
-  text-transform: uppercase;
-  border: none;
-  border-radius: var(--radius-lg);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all var(--transition-base);
-  position: relative;
-  overflow: hidden;
-  user-select: none;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  border: 1px solid transparent;
   text-decoration: none;
-}
-
-.btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-accent) 100%);
-  opacity: 0;
-  transition: opacity var(--transition-base);
-}
-
-.btn > * {
-  position: relative;
-  z-index: 1;
+  user-select: none;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
-  color: var(--color-text-inverse);
-  box-shadow: var(--shadow-md);
+  background: var(--accent);
+  color: var(--bg-base);
+  border-color: var(--accent);
 }
 
 .btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg), var(--shadow-glow);
-}
-
-.btn-primary:hover:not(:disabled)::before {
-  opacity: 1;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 .btn-secondary {
-  background: var(--color-bg-secondary);
-  color: var(--color-primary);
-  border: 2px solid var(--color-border-dark);
-  box-shadow: var(--shadow-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--bg-border);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  border-color: var(--color-primary);
-  background: var(--color-bg-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.btn-accent {
-  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-light) 100%);
-  color: var(--color-text-primary);
-  box-shadow: var(--shadow-md), var(--shadow-glow);
-}
-
-.btn-accent:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg), var(--shadow-glow-lg);
+  border-color: var(--text-muted);
+  color: var(--text-primary);
 }
 
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none !important;
 }
 
 .btn-sm {
@@ -94,275 +53,190 @@
   font-size: var(--font-size-xs);
 }
 
-.btn-lg {
-  padding: var(--space-4) var(--space-8);
-  font-size: var(--font-size-base);
-}
-
-/* ============================================
-   Cards
-   ============================================ */
-
+/* ============ Cards ============ */
 .card {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2xl);
-  padding: var(--space-6);
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-base);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
   position: relative;
-  overflow: hidden;
-}
-
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 100%);
-  opacity: 0;
-  transition: opacity var(--transition-base);
-}
-
-.card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
-  border-color: var(--color-border-accent);
-}
-
-.card:hover::before {
-  opacity: 1;
 }
 
 .card-elevated {
-  box-shadow: var(--shadow-lg);
-  border: none;
+  background: var(--bg-surface-elevated);
 }
 
-.card-interactive {
-  cursor: pointer;
-}
-
-/* ============================================
-   Badges & Tags
-   ============================================ */
-
+/* ============ Badges (health status) ============ */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-mono);
   font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight);
+  font-weight: var(--font-weight-medium);
   text-transform: uppercase;
   letter-spacing: var(--letter-spacing-wide);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
-  transition: all var(--transition-fast);
 }
 
-.badge-success {
-  background: var(--color-success-bg);
-  color: var(--color-success-text);
-  border-color: var(--color-success);
+.badge-success,
+.health-healthy {
+  background: transparent;
+  color: var(--status-healthy);
+  border-color: var(--status-healthy);
 }
 
-.badge-warning {
-  background: var(--color-warning-bg);
-  color: var(--color-warning-text);
-  border-color: var(--color-warning);
+.badge-warning,
+.health-moderate {
+  background: transparent;
+  color: var(--status-moderate);
+  border-color: var(--status-moderate);
 }
 
-.badge-error {
-  background: var(--color-error-bg);
-  color: var(--color-error-text);
-  border-color: var(--color-error);
+.badge-error,
+.health-poor {
+  background: transparent;
+  color: var(--status-poor);
+  border-color: var(--status-poor);
 }
 
 .badge-info {
-  background: var(--color-info-bg);
-  color: var(--color-info-text);
-  border-color: var(--color-info);
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--bg-border);
 }
 
 .badge-neutral {
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-secondary);
-  border-color: var(--color-border);
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--bg-border);
 }
 
-/* ============================================
-   Inputs & Forms
-   ============================================ */
+/* ============ Metrics / stat displays ============ */
+.metric {
+  padding: var(--space-4);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
 
+.metric-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+  font-family: var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.metric-value {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  line-height: var(--line-height-tight);
+}
+
+.metric-value .unit {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  font-weight: var(--font-weight-normal);
+}
+
+/* ============ Section titles ============ */
+.section-title {
+  font-family: var(--font-body);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
+  margin: 0 0 var(--space-4);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ============ Inputs ============ */
 .input {
   width: 100%;
   padding: var(--space-3) var(--space-4);
   font-family: var(--font-body);
   font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  background: var(--color-bg-secondary);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-base);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast);
 }
 
 .input:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-bg-overlay), var(--shadow-sm);
+  border-color: var(--accent);
 }
 
 .input::placeholder {
-  color: var(--color-text-tertiary);
+  color: var(--text-muted);
 }
 
-/* ============================================
-   Metrics & Stats
-   ============================================ */
-
-.metric {
-  background: linear-gradient(135deg, var(--color-bg-tertiary) 0%, var(--color-bg-secondary) 100%);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-5);
-  transition: all var(--transition-base);
-  position: relative;
-  overflow: hidden;
-}
-
-.metric::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-accent) 100%);
-  opacity: 0;
-  transition: opacity var(--transition-base);
-}
-
-.metric:hover {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-
-.metric:hover::before {
-  opacity: 1;
-}
-
-.metric-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  margin-bottom: var(--space-2);
-  font-weight: var(--font-weight-medium);
-  text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-wider);
-}
-
-.metric-value {
-  font-family: var(--font-display);
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
-  line-height: var(--line-height-tight);
-}
-
-/* ============================================
-   Sections & Headers
-   ============================================ */
-
-.section-title {
-  font-family: var(--font-display);
-  font-weight: var(--font-weight-bold);
-  font-size: var(--font-size-xl);
-  margin: 0 0 var(--space-6);
-  color: var(--color-primary);
-  letter-spacing: var(--letter-spacing-tight);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.section-title::after {
-  content: '';
-  flex: 1;
-  height: 2px;
-  background: linear-gradient(90deg, var(--color-border) 0%, transparent 100%);
-}
-
-.section-subtitle {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  margin-top: var(--space-2);
-  font-weight: var(--font-weight-normal);
-}
-
-/* ============================================
-   Lists
-   ============================================ */
-
+/* ============ Lists & tables ============ */
 .list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 0;
 }
 
 .list-item {
   padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--bg-border);
+  border-top: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: all var(--transition-base);
-  background: var(--color-bg-secondary);
+  background: var(--bg-surface);
+  transition: background var(--transition-fast);
+}
+
+.list-item:first-child {
+  border-top: 1px solid var(--bg-border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.list-item:last-child {
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.list-item:nth-child(even) {
+  background: var(--bg-surface-elevated);
 }
 
 .list-item:hover {
-  border-color: var(--color-primary);
-  background: var(--color-bg-hover);
-  box-shadow: var(--shadow-sm);
-  transform: translateX(4px);
+  background: var(--bg-hover);
 }
 
-/* ============================================
-   Empty States
-   ============================================ */
-
+/* ============ Empty state ============ */
 .empty-state {
   text-align: center;
-  padding: var(--space-16) var(--space-6);
-  color: var(--color-text-tertiary);
+  padding: var(--space-12) var(--space-6);
+  color: var(--text-muted);
 }
 
 .empty-state-icon {
-  font-size: 4rem;
   margin-bottom: var(--space-4);
-  opacity: 0.3;
-  filter: grayscale(1);
+  color: var(--text-muted);
 }
 
 .empty-state-title {
-  font-family: var(--font-display);
-  font-size: var(--font-size-xl);
+  font-family: var(--font-body);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   margin-bottom: var(--space-2);
 }
 
 .empty-state-description {
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  max-width: 400px;
+  color: var(--text-muted);
+  max-width: 360px;
   margin: 0 auto;
 }
-
-
-
-

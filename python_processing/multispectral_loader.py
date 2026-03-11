@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 import logging
 import yaml
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,32 @@ def detect_band_schema(image_path: str, dataset_name: Optional[str] = None) -> D
     """
     registry = load_dataset_registry()
     image_path = Path(image_path)
+
+    # MAPIR Survey3(W) heuristic detection
+    # - If the file path contains "mapir" OR EXIF Make/Model contains "MAPIR",
+    #   route to a configured dataset schema (default: mapir_survey3w_rgb).
+    # This is important for Survey3W variants like NGB (NIR+G+B) where channels
+    # should not be interpreted as standard RGB.
+    try:
+        lower_path = str(image_path).lower()
+        if dataset_name is None and ("mapir" in lower_path):
+            dataset_name = os.getenv("MAPIR_DATASET_NAME", "mapir_survey3w_rgb")
+        if dataset_name is None and image_path.suffix.lower() in [".jpg", ".jpeg"]:
+            try:
+                from PIL import Image, ExifTags  # pillow is already in requirements
+                img = Image.open(image_path)
+                exif = img.getexif()
+                if exif:
+                    tag_map = {ExifTags.TAGS.get(k, k): v for k, v in exif.items()}
+                    make = str(tag_map.get("Make", "")).upper()
+                    model = str(tag_map.get("Model", "")).upper()
+                    if "MAPIR" in make or "MAPIR" in model or "SURVEY3" in model:
+                        dataset_name = os.getenv("MAPIR_DATASET_NAME", "mapir_survey3w_rgb")
+            except Exception:
+                # EXIF detection is best-effort; proceed with default logic
+                pass
+    except Exception:
+        pass
     
     # Try to get dataset-specific schema
     if dataset_name and dataset_name in registry.get('datasets', {}):

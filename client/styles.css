@@ -1,17 +1,12 @@
 /**
- * Precision Agriculture Dashboard - Main Stylesheet
- * Complete redesign with distinctive aesthetic and best practices
+ * CropView — Main Stylesheet
+ * Industrial precision: dark base, bottom-border nav, no gradients
  */
 
-/* Import Design System */
 @import './src/styles/design-tokens.css';
 @import './src/styles/typography.css';
 @import './src/styles/components.css';
 @import './src/styles/animations.css';
-
-/* ============================================
-   Base Reset & Global Styles
-   ============================================ */
 
 *,
 *::before,
@@ -23,37 +18,16 @@
 
 html {
   -webkit-text-size-adjust: 100%;
-  -moz-tab-size: 4;
-  tab-size: 4;
-  font-feature-settings: normal;
-  font-variation-settings: normal;
 }
 
 body {
   margin: 0;
   font-family: var(--font-body);
   font-size: var(--font-size-base);
-  font-weight: var(--font-weight-normal);
-  line-height: var(--line-height-normal);
-  color: var(--color-text-primary);
-  background: linear-gradient(135deg, var(--color-bg-primary) 0%, #f0f4f2 50%, var(--color-bg-tertiary) 100%);
-  background-attachment: fixed;
+  color: var(--text-primary);
+  background: var(--bg-base);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
-
-/* Add subtle texture overlay */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: 
-    radial-gradient(circle at 20% 50%, rgba(0, 212, 170, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(10, 93, 44, 0.03) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
 }
 
 #root {
@@ -61,26 +35,16 @@ body::before {
   z-index: 1;
 }
 
-/* ============================================
-   Header & Navigation
-   ============================================ */
-
+/* ============ Header — fixed top, bottom border only ============ */
 header {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: var(--backdrop-blur);
-  -webkit-backdrop-filter: var(--backdrop-blur);
-  border-bottom: 1px solid var(--color-border);
-  padding: var(--space-5) var(--space-6);
-  position: sticky;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--bg-border);
+  padding: var(--space-4) var(--space-6);
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: var(--z-sticky);
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-base);
-}
-
-header:hover {
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: var(--shadow-md);
 }
 
 header > div {
@@ -94,259 +58,135 @@ header > div {
 
 header h1 {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-extrabold);
-  color: var(--color-primary);
-  letter-spacing: var(--letter-spacing-tighter);
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  position: relative;
-}
-
-header h1::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 0;
-  width: 60%;
-  height: 3px;
-  background: linear-gradient(90deg, var(--color-accent) 0%, transparent 100%);
-  border-radius: var(--radius-full);
-}
-
-/* Navigation Tabs */
-.tabs {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: 0;
-  background: var(--color-bg-tertiary);
-  padding: var(--space-1);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-inner);
-  position: relative;
-}
-
-.tab {
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  font-family: var(--font-heading);
-  font-weight: var(--font-weight-medium);
-  font-size: var(--font-size-sm);
-  padding: var(--space-2) var(--space-5);
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-base);
-  position: relative;
-  white-space: nowrap;
-  letter-spacing: var(--letter-spacing-wide);
-  text-transform: uppercase;
-}
-
-.tab::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
-  opacity: 0;
-  transition: opacity var(--transition-base);
-}
-
-.tab:hover {
-  color: var(--color-primary);
-  background: var(--color-bg-hover);
-  transform: translateY(-1px);
-}
-
-.tab.active {
-  color: var(--color-text-inverse);
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
-  box-shadow: var(--shadow-md), var(--shadow-glow);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  letter-spacing: var(--letter-spacing-tight);
 }
 
-.tab.active::before {
-  opacity: 0;
+header nav {
+  display: flex;
+  gap: 0;
+  align-items: center;
 }
 
-/* ============================================
-   Layout & Containers
-   ============================================ */
+header .nav-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  transition: color var(--transition-fast), background var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+header .nav-link:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+header .nav-link.active {
+  color: var(--accent);
+}
+
+/* ============ Main content (below fixed header) ============ */
+main {
+  padding-top: 60px;
+  min-height: calc(100vh - 60px);
+}
 
 .container {
   padding: var(--space-8) var(--space-6);
   max-width: var(--container-max-width);
   margin: 0 auto;
-  animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .container-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: var(--space-6);
 }
 
-/* ============================================
-   Map Wrapper
-   ============================================ */
-
+/* ============ Map wrapper ============ */
 .map-wrapper {
   height: 70vh;
-  min-height: 500px;
+  min-height: 400px;
   overflow: hidden;
-  border-radius: var(--radius-2xl);
-  border: 2px solid var(--color-border);
-  background: var(--color-bg-tertiary);
-  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--bg-border);
+  background: var(--bg-surface);
   position: relative;
-  overflow: hidden;
-}
-
-.map-wrapper::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius-2xl);
-  background: linear-gradient(135deg, rgba(0, 212, 170, 0.02) 0%, transparent 100%);
-  pointer-events: none;
-  z-index: 1;
 }
 
 .map-wrapper .leaflet-container {
   height: 100%;
   width: 100%;
-  position: relative;
-  z-index: 0;
+  background: var(--bg-base);
 }
 
-.map-wrapper .leaflet-pane {
-  will-change: transform;
+.map-wrapper .leaflet-control-attribution {
+  background: var(--bg-surface) !important;
+  color: var(--text-muted) !important;
+  font-size: 10px;
 }
 
-.map-wrapper .leaflet-tile-container {
-  will-change: transform;
+.map-wrapper .leaflet-control-attribution a {
+  color: var(--text-secondary);
 }
 
-.map-wrapper .leaflet-tile {
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-}
-
-.map-wrapper .leaflet-container {
-  -webkit-tap-highlight-color: transparent;
-  touch-action: pan-x pan-y;
-}
-
-.map-wrapper .leaflet-tile-loaded {
-  opacity: 1;
-  transition: opacity 0.2s;
-}
-
-/* ============================================
-   Metrics Grid
-   ============================================ */
-
+/* ============ Metrics grid ============ */
 .metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: var(--space-4);
   margin-bottom: var(--space-5);
 }
 
-/* ============================================
-   Grid Layouts
-   ============================================ */
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: var(--space-1);
-  margin-top: var(--space-4);
-}
-
-.grid-cell {
-  aspect-ratio: 1/1;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-tertiary);
-  transition: all var(--transition-fast);
-}
-
-.grid-cell:hover {
-  border-color: var(--color-primary);
-  transform: scale(1.1);
-  z-index: 1;
-  box-shadow: var(--shadow-md);
-}
-
-/* ============================================
-   Scrollbar Styling
-   ============================================ */
-
+/* ============ Scrollbar ============ */
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg-tertiary);
-  border-radius: var(--radius-full);
+  background: var(--bg-surface);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border-dark);
-  border-radius: var(--radius-full);
-  border: 2px solid var(--color-bg-tertiary);
+  background: var(--bg-border);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-primary);
+  background: var(--text-muted);
 }
-
-/* ============================================
-   Selection
-   ============================================ */
 
 ::selection {
-  background: var(--color-accent-light);
-  color: var(--color-text-primary);
+  background: var(--accent-muted);
+  color: var(--text-primary);
 }
-
-/* ============================================
-   Focus States
-   ============================================ */
 
 *:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 1px solid var(--accent);
   outline-offset: 2px;
-  border-radius: var(--radius-sm);
 }
-
-/* ============================================
-   Responsive Design
-   ============================================ */
 
 @media (max-width: 1024px) {
   .container-grid {
     grid-template-columns: 1fr;
   }
-  
-  .map-wrapper {
-    height: 50vh;
-    min-height: 400px;
-  }
-  
   header > div {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-wrap: wrap;
   }
-  
-  .tabs {
+  header nav {
     width: 100%;
-    justify-content: flex-start;
     overflow-x: auto;
+    padding-bottom: var(--space-2);
   }
 }
 
@@ -354,30 +194,13 @@ header h1::after {
   .container {
     padding: var(--space-4);
   }
-  
-  .tabs {
-    flex-wrap: wrap;
-    gap: var(--space-1);
+  header {
+    padding: var(--space-3) var(--space-4);
   }
-  
-  .tab {
-    font-size: var(--font-size-xs);
-    padding: var(--space-2) var(--space-3);
-  }
-  
   header h1 {
-    font-size: var(--font-size-xl);
+    font-size: var(--font-size-lg);
   }
-  
   .card {
     padding: var(--space-4);
-  }
-  
-  .metrics {
-    grid-template-columns: 1fr;
-  }
-  
-  .metric-value {
-    font-size: var(--font-size-2xl);
   }
 }

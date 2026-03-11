@@ -4,6 +4,7 @@ import ProcessingStatus from '../components/ProcessingStatus.jsx';
 import VegetationIndexMaps from '../components/VegetationIndexMaps.jsx';
 import MLExplanation from '../components/MLExplanation.jsx';
 import { api, buildImageUrl, formatDate } from '../utils/api.js';
+import { Download, ImagePlus, BarChart2, LayoutList, Layers, Brain } from 'lucide-react';
 
 export default function AnalyticsPage() {
   const [images, setImages] = useState([]);
@@ -146,30 +147,30 @@ export default function AnalyticsPage() {
         <div className="card">
           <div className="section-title">Upload & Image Analyses</div>
           <UploadPanel onUploaded={(item) => setImages(prev => [item, ...prev])} />
-          <div style={{ marginTop: 20 }}>
-            <div className="section-title" style={{ marginBottom: 12 }}>Recent Analyses</div>
+          <div style={{ marginTop: 'var(--space-6)' }}>
+            <div className="section-title" style={{ marginBottom: 'var(--space-3)' }}>Recent Analyses</div>
             <div className="list">
               {images.map(img => (
-                <div 
-                  className="list-item" 
+                <div
+                  className="list-item"
                   key={img.id}
                   onClick={() => setSelectedImageId(img.id)}
-                  style={{ 
+                  style={{
                     cursor: 'pointer',
-                    border: selectedImageId === img.id ? '2px solid #3b82f6' : '1px solid #e5e7eb'
+                    borderLeft: selectedImageId === img.id ? '3px solid var(--accent)' : '3px solid transparent',
                   }}
                 >
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
-                    <img 
-                      src={buildImageUrl(img) || '/placeholder.png'} 
-                      alt={img.originalName} 
-                      style={{ 
-                        width: 56, 
-                        height: 56, 
-                        objectFit: 'cover', 
-                        borderRadius: 8, 
-                        border: '1px solid #e5e7eb' 
-                      }} 
+                  <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flex: 1 }}>
+                    <img
+                      src={buildImageUrl(img) || '/placeholder.png'}
+                      alt={img.originalName}
+                      style={{
+                        width: 56,
+                        height: 56,
+                        objectFit: 'cover',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--bg-border)',
+                      }}
                       onError={(e) => {
                         // #region agent log
                         fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Analytics.jsx:163',message:'Image load error',data:{imageId:img.id,builtUrl:buildImageUrl(img)},timestamp:Date.now(),sessionId:'debug-session',runId:'website-fix',hypothesisId:'B'})}).catch(()=>{});
@@ -178,34 +179,22 @@ export default function AnalyticsPage() {
                       }}
                     />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>
+                      <div style={{ fontWeight: 'var(--font-weight-semibold)', fontSize: 'var(--font-size-sm)', color: 'var(--text-primary)' }}>
                         {img.originalName || img.filename}
                       </div>
-                      <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                      <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginTop: 'var(--space-1)' }}>
                         {formatDate(img.createdAt, 'datetime')}
                       </div>
                       {img.processingStatus && (
-                        <div style={{ 
-                          fontSize: 10, 
-                          marginTop: 4,
-                          padding: '2px 6px',
-                          borderRadius: 4,
-                          display: 'inline-block',
-                          background: img.processingStatus === 'completed' ? '#d1fae5' :
-                                     img.processingStatus === 'processing' ? '#fef3c7' :
-                                     img.processingStatus === 'failed' ? '#fee2e2' : '#f3f4f6',
-                          color: img.processingStatus === 'completed' ? '#065f46' :
-                                 img.processingStatus === 'processing' ? '#92400e' :
-                                 img.processingStatus === 'failed' ? '#991b1b' : '#6b7280'
-                        }}>
+                        <span className={`badge ${img.processingStatus === 'completed' ? 'badge-success' : img.processingStatus === 'processing' ? 'badge-warning' : img.processingStatus === 'failed' ? 'badge-error' : 'badge-info'}`} style={{ marginTop: 'var(--space-2)', display: 'inline-block' }}>
                           {img.processingStatus}
-                        </div>
+                        </span>
                       )}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
                     {img?.analysis?.ndvi?.mean !== undefined && (
-                      <span className="badge">
+                      <span className="badge badge-info" style={{ fontFamily: 'var(--font-mono)' }}>
                         NDVI {img.analysis?.ndvi?.mean?.toFixed(2) || 'N/A'}
                       </span>
                     )}
@@ -214,9 +203,9 @@ export default function AnalyticsPage() {
               ))}
               {images.length === 0 && (
                 <div className="empty-state">
-                  <div className="empty-state-icon">📸</div>
-                  <div>No images analyzed yet</div>
-                  <div style={{ fontSize: 14, marginTop: 8 }}>Upload images to get started</div>
+                  <div className="empty-state-icon"><ImagePlus size={48} strokeWidth={1} aria-hidden /></div>
+                  <div className="empty-state-title">No images analyzed yet</div>
+                  <div className="empty-state-description">Upload images to get started</div>
                 </div>
               )}
             </div>
@@ -224,30 +213,23 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <div className="section-title">Analysis Details</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
+            <div className="section-title" style={{ marginBottom: 0 }}>Analysis Details</div>
             {selectedImage && selectedImage.analysis && (
               <button
                 onClick={() => exportAnalysis(selectedImage)}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  border: '1px solid #e5e7eb',
-                  background: 'white',
-                  color: '#374151',
-                  fontSize: 12,
-                  cursor: 'pointer'
-                }}
+                className="btn btn-secondary btn-sm"
               >
-                📥 Export JSON
+                <Download size={16} aria-hidden />
+                Export JSON
               </button>
             )}
           </div>
 
           {!selectedImage && (
             <div className="empty-state">
-              <div className="empty-state-icon">📊</div>
-              <div>Select an image to view analysis</div>
+              <div className="empty-state-icon"><BarChart2 size={48} strokeWidth={1} aria-hidden /></div>
+              <div className="empty-state-title">Select an image to view analysis</div>
             </div>
           )}
 
@@ -307,30 +289,27 @@ export default function AnalyticsPage() {
               )}
 
               {/* Tabs */}
-              <div style={{ 
-                display: 'flex', 
-                gap: 8, 
-                marginBottom: 20,
-                borderBottom: '1px solid #e5e7eb'
-              }}>
-                {['overview', 'indices', 'ml', 'details'].map(tab => (
+              <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-5)', borderBottom: '1px solid var(--bg-border)' }}>
+                {[
+                  { id: 'overview', label: 'Overview', icon: BarChart2 },
+                  { id: 'indices', label: 'Vegetation Indices', icon: Layers },
+                  { id: 'ml', label: 'ML Analysis', icon: Brain },
+                  { id: 'details', label: 'Details', icon: LayoutList },
+                ].map(({ id, label, icon: TabIcon }) => (
                   <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    key={id}
+                    onClick={() => setActiveTab(id)}
+                    className="btn btn-secondary"
                     style={{
-                      padding: '10px 16px',
-                      border: 'none',
-                      borderBottom: `2px solid ${activeTab === tab ? '#3b82f6' : 'transparent'}`,
-                      background: 'transparent',
-                      color: activeTab === tab ? '#3b82f6' : '#6b7280',
-                      fontWeight: activeTab === tab ? 600 : 400,
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      textTransform: 'capitalize'
+                      borderBottom: '2px solid transparent',
+                      borderRadius: 0,
+                      borderBottomColor: activeTab === id ? 'var(--accent)' : 'transparent',
+                      color: activeTab === id ? 'var(--accent)' : 'var(--text-muted)',
+                      fontWeight: activeTab === id ? 'var(--font-weight-semibold)' : 'var(--font-weight-normal)',
                     }}
                   >
-                    {tab === 'indices' ? 'Vegetation Indices' : 
-                     tab === 'ml' ? 'ML Analysis' : tab}
+                    <TabIcon size={16} aria-hidden />
+                    {label}
                   </button>
                 ))}
               </div>
@@ -340,51 +319,39 @@ export default function AnalyticsPage() {
                 <div>
                   {selectedImage.analysis ? (
                     <>
-                      <div className="metrics" style={{ marginBottom: 20 }}>
+                      <div className="metrics" style={{ marginBottom: 'var(--space-5)' }}>
                         {selectedImage.analysis.ndvi?.mean !== undefined && (
                           <div className="metric">
                             <div className="metric-label">NDVI</div>
-                            <div className="metric-value">
-                              {selectedImage.analysis.ndvi.mean.toFixed(3)}
-                            </div>
+                            <div className="metric-value">{selectedImage.analysis.ndvi.mean.toFixed(3)}</div>
                           </div>
                         )}
                         {selectedImage.analysis.savi?.mean !== undefined && (
                           <div className="metric">
                             <div className="metric-label">SAVI</div>
-                            <div className="metric-value">
-                              {selectedImage.analysis.savi.mean.toFixed(3)}
-                            </div>
+                            <div className="metric-value">{selectedImage.analysis.savi.mean.toFixed(3)}</div>
                           </div>
                         )}
                         {selectedImage.analysis.gndvi?.mean !== undefined && (
                           <div className="metric">
                             <div className="metric-label">GNDVI</div>
-                            <div className="metric-value">
-                              {selectedImage.analysis.gndvi.mean.toFixed(3)}
-                            </div>
+                            <div className="metric-value">{selectedImage.analysis.gndvi.mean.toFixed(3)}</div>
                           </div>
                         )}
                         {selectedImage.analysis.healthStatus && (
                           <div className="metric">
                             <div className="metric-label">Health Status</div>
-                            <div className="metric-value" style={{ fontSize: 16, textTransform: 'capitalize' }}>
-                              {selectedImage.analysis.healthStatus.replace('_', ' ')}
-                            </div>
+                            <div className="metric-value" style={{ fontSize: 'var(--font-size-base)', textTransform: 'capitalize', fontFamily: 'var(--font-mono)' }}>{selectedImage.analysis.healthStatus.replace('_', ' ')}</div>
                           </div>
                         )}
                       </div>
 
                       {buildImageUrl(selectedImage) && (
-                        <div style={{ marginBottom: 20 }}>
-                          <img 
-                            src={buildImageUrl(selectedImage)} 
+                        <div style={{ marginBottom: 'var(--space-5)' }}>
+                          <img
+                            src={buildImageUrl(selectedImage)}
                             alt={selectedImage.originalName}
-                            style={{ 
-                              width: '100%', 
-                              borderRadius: 8, 
-                              border: '1px solid #e5e7eb'
-                            }} 
+                            style={{ width: '100%', borderRadius: 'var(--radius-md)', border: '1px solid var(--bg-border)' }}
                             onError={(e) => {
                               // #region agent log
                               fetch('http://127.0.0.1:7242/ingest/d3c584d3-d2e8-4033-b813-a5c38caf839a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Analytics.jsx:330',message:'Selected image load error',data:{imageId:selectedImage.id,builtUrl:buildImageUrl(selectedImage)},timestamp:Date.now(),sessionId:'debug-session',runId:'website-fix',hypothesisId:'B'})}).catch(()=>{});
@@ -396,25 +363,14 @@ export default function AnalyticsPage() {
                       )}
 
                       {selectedImage.analysis.summary && (
-                        <div style={{
-                          padding: 16,
-                          background: '#f9fafb',
-                          borderRadius: 8,
-                          border: '1px solid #e5e7eb'
-                        }}>
-                          <div style={{ fontWeight: 600, marginBottom: 8, color: '#111827' }}>
-                            Summary
-                          </div>
-                          <div style={{ color: '#374151', lineHeight: 1.6 }}>
-                            {selectedImage.analysis.summary}
-                          </div>
+                        <div style={{ padding: 'var(--space-4)', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-md)', border: '1px solid var(--bg-border)' }}>
+                          <div style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)', color: 'var(--text-primary)' }}>Summary</div>
+                          <div style={{ color: 'var(--text-secondary)', lineHeight: 'var(--line-height-relaxed)' }}>{selectedImage.analysis.summary}</div>
                         </div>
                       )}
                     </>
                   ) : (
-                    <div style={{ padding: 20, textAlign: 'center', color: '#6b7280' }}>
-                      Analysis not yet available. Processing...
-                    </div>
+                    <div style={{ padding: 'var(--space-5)', textAlign: 'center', color: 'var(--text-muted)' }}>Analysis not yet available. Processing...</div>
                   )}
                 </div>
               )}
@@ -438,71 +394,39 @@ export default function AnalyticsPage() {
                       image={selectedImage}
                     />
                   ) : (
-                    <div style={{ padding: 20, textAlign: 'center', color: '#6b7280' }}>
-                      ML analysis not available. Train a model to enable ML-based classification.
-                    </div>
+                    <div style={{ padding: 'var(--space-5)', textAlign: 'center', color: 'var(--text-muted)' }}>ML analysis not available. Train a model to enable ML-based classification.</div>
                   )}
                 </div>
               )}
 
               {activeTab === 'details' && (
                 <div>
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontWeight: 600, marginBottom: 8, color: '#111827' }}>
-                      Processing Information
-                    </div>
-                    <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.8 }}>
-                      <div>Status: <strong>{selectedImage.processingStatus || 'uploaded'}</strong></div>
-                      {selectedImage.createdAt && (
-                        <div>Uploaded: {formatDate(selectedImage.createdAt, 'datetime')}</div>
-                      )}
-                      {selectedImage.processedAt && (
-                        <div>Processed: {formatDate(selectedImage.processedAt, 'datetime')}</div>
-                      )}
-                      {selectedImage.analysis?.analysisType && (
-                        <div>Analysis Type: {selectedImage.analysis.analysisType}</div>
-                      )}
-                      {selectedImage.analysis?.modelVersion && (
-                        <div>Model Version: {selectedImage.analysis.modelVersion}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {selectedImage.analysis && (
-                    <div>
-                      <div style={{ fontWeight: 600, marginBottom: 8, color: '#111827' }}>
-                        Full Analysis Data
+                    <div style={{ marginBottom: 'var(--space-4)' }}>
+                      <div style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)', color: 'var(--text-primary)' }}>Processing Information</div>
+                      <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+                        <div>Status: <strong>{selectedImage.processingStatus || 'uploaded'}</strong></div>
+                        {selectedImage.createdAt && <div>Uploaded: {formatDate(selectedImage.createdAt, 'datetime')}</div>}
+                        {selectedImage.processedAt && <div>Processed: {formatDate(selectedImage.processedAt, 'datetime')}</div>}
+                        {selectedImage.analysis?.analysisType && <div>Analysis Type: {selectedImage.analysis.analysisType}</div>}
+                        {selectedImage.analysis?.modelVersion && <div>Model Version: {selectedImage.analysis.modelVersion}</div>}
                       </div>
-                      <pre style={{
-                        padding: 16,
-                        background: '#1f2937',
-                        color: '#f9fafb',
-                        borderRadius: 8,
-                        fontSize: 11,
-                        overflow: 'auto',
-                        maxHeight: '400px'
-                      }}>
-                        {JSON.stringify(selectedImage.analysis, null, 2)}
-                      </pre>
                     </div>
-                  )}
 
-                  {selectedImage.analysis?.processedImageUrl && (
-                    <div style={{ marginTop: 20 }}>
-                      <div style={{ fontWeight: 600, marginBottom: 8, color: '#111827' }}>
-                        Processed Image
+                    {selectedImage.analysis && (
+                      <div>
+                        <div style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)', color: 'var(--text-primary)' }}>Full Analysis Data</div>
+                        <pre style={{ padding: 'var(--space-4)', background: 'var(--bg-base)', color: 'var(--text-primary)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-xs)', overflow: 'auto', maxHeight: '400px', fontFamily: 'var(--font-mono)', border: '1px solid var(--bg-border)' }}>
+                          {JSON.stringify(selectedImage.analysis, null, 2)}
+                        </pre>
                       </div>
-                      <img
-                        src={selectedImage.analysis.processedImageUrl}
-                        alt="Processed"
-                        style={{
-                          width: '100%',
-                          borderRadius: 8,
-                          border: '1px solid #e5e7eb'
-                        }}
-                      />
-                    </div>
-                  )}
+                    )}
+
+                    {selectedImage.analysis?.processedImageUrl && (
+                      <div style={{ marginTop: 'var(--space-5)' }}>
+                        <div style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)', color: 'var(--text-primary)' }}>Processed Image</div>
+                        <img src={selectedImage.analysis.processedImageUrl} alt="Processed" style={{ width: '100%', borderRadius: 'var(--radius-md)', border: '1px solid var(--bg-border)' }} />
+                      </div>
+                    )}
                 </div>
               )}
             </>

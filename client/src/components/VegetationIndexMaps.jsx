@@ -116,36 +116,26 @@ export default function VegetationIndexMaps({ imageUrl, analysis, onMapGenerated
   };
 
   const getIndexColor = (value) => {
-    if (value === null || value === undefined) return '#6b7280';
-    if (value >= 0.7) return '#059669'; // green (healthy)
-    if (value >= 0.5) return '#f59e0b'; // amber (moderate)
-    if (value >= 0.3) return '#f97316'; // orange (poor)
-    return '#dc2626'; // red (very poor)
+    if (value === null || value === undefined) return 'var(--text-muted)';
+    if (value >= 0.7) return 'var(--status-healthy)';
+    if (value >= 0.5) return 'var(--status-moderate)';
+    if (value >= 0.3) return 'var(--status-moderate)';
+    return 'var(--status-poor)';
   };
 
   return (
     <div>
-      {/* Toggle Buttons */}
-      <div style={{ 
-        display: 'flex', 
-        gap: 8, 
-        marginBottom: 16,
-        flexWrap: 'wrap'
-      }}>
+      <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
         {['original', 'ndvi', 'savi', 'gndvi'].map(mapType => (
           <button
             key={mapType}
             onClick={() => setActiveMap(mapType)}
+            className="btn btn-secondary"
             style={{
-              padding: '8px 16px',
-              borderRadius: 6,
-              border: `2px solid ${activeMap === mapType ? '#3b82f6' : '#e5e7eb'}`,
-              background: activeMap === mapType ? '#eff6ff' : 'white',
-              color: activeMap === mapType ? '#1e40af' : '#374151',
-              fontWeight: activeMap === mapType ? 600 : 400,
-              cursor: 'pointer',
-              fontSize: 13,
-              textTransform: 'capitalize'
+              borderColor: activeMap === mapType ? 'var(--accent)' : 'var(--bg-border)',
+              background: activeMap === mapType ? 'var(--accent-muted)' : 'transparent',
+              color: activeMap === mapType ? 'var(--accent)' : 'var(--text-secondary)',
+              fontWeight: activeMap === mapType ? 'var(--font-weight-semibold)' : 'var(--font-weight-normal)',
             }}
           >
             {mapType === 'original' ? 'Original Image' : mapType.toUpperCase()}
@@ -153,83 +143,29 @@ export default function VegetationIndexMaps({ imageUrl, analysis, onMapGenerated
         ))}
       </div>
 
-      {/* Image Canvas */}
-      <div style={{ position: 'relative', marginBottom: 16 }}>
-        <img
-          ref={imgRef}
-          src={imageUrl}
-          alt="Crop image"
-          style={{ display: 'none' }}
-          onLoad={generateHeatmap}
-        />
+      <div style={{ position: 'relative', marginBottom: 'var(--space-4)' }}>
+        <img ref={imgRef} src={imageUrl} alt="Crop image" style={{ display: 'none' }} onLoad={generateHeatmap} />
         <canvas
           ref={canvasRef}
-          style={{
-            width: '100%',
-            height: 'auto',
-            borderRadius: 8,
-            border: '1px solid #e5e7eb',
-            maxHeight: '500px',
-            objectFit: 'contain'
-          }}
+          style={{ width: '100%', height: 'auto', borderRadius: 'var(--radius-lg)', border: '1px solid var(--bg-border)', maxHeight: '500px', objectFit: 'contain' }}
         />
         {activeMap !== 'original' && (
-          <div style={{
-            position: 'absolute',
-            top: 12,
-            right: 12,
-            padding: '8px 12px',
-            background: 'rgba(0, 0, 0, 0.7)',
-            color: 'white',
-            borderRadius: 6,
-            fontSize: 12,
-            fontWeight: 600
-          }}>
+          <div style={{ position: 'absolute', top: 12, right: 12, padding: 'var(--space-2) var(--space-3)', background: 'var(--bg-surface)', border: '1px solid var(--bg-border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-xs)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
             {activeMap.toUpperCase()} Heatmap
           </div>
         )}
       </div>
 
-      {/* Statistics Display */}
       {analysis && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 12,
-          marginTop: 16
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
           {['ndvi', 'savi', 'gndvi'].map(indexName => {
             const index = analysis[indexName];
             if (!index || index.mean === undefined) return null;
-            
             return (
-              <div
-                key={indexName}
-                style={{
-                  padding: 12,
-                  background: '#f9fafb',
-                  borderRadius: 8,
-                  border: `2px solid ${getIndexColor(index.mean)}`
-                }}
-              >
-                <div style={{ 
-                  fontSize: 11, 
-                  color: '#6b7280', 
-                  marginBottom: 4,
-                  textTransform: 'uppercase',
-                  fontWeight: 600
-                }}>
-                  {indexName}
-                </div>
-                <div style={{ 
-                  fontSize: 24, 
-                  fontWeight: 700,
-                  color: getIndexColor(index.mean),
-                  marginBottom: 8
-                }}>
-                  {index.mean.toFixed(3)}
-                </div>
-                <div style={{ fontSize: 11, color: '#6b7280' }}>
+              <div key={indexName} style={{ padding: 'var(--space-4)', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--bg-border)' }}>
+                <div className="metric-label" style={{ marginBottom: 'var(--space-2)' }}>{indexName.toUpperCase()}</div>
+                <div className="metric-value" style={{ color: getIndexColor(index.mean), marginBottom: 'var(--space-2)' }}>{index.mean.toFixed(3)}</div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                   <div>Min: {index.min !== undefined ? index.min.toFixed(3) : 'N/A'}</div>
                   <div>Max: {index.max !== undefined ? index.max.toFixed(3) : 'N/A'}</div>
                   <div>Std: {index.std !== undefined ? index.std.toFixed(3) : 'N/A'}</div>

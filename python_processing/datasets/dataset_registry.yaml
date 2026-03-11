@@ -32,6 +32,31 @@ datasets:
     source_band_order: ["R", "G", "B", "RE", "NIR"]  # Original order for reference
     domain: "uav"
     domain_mismatch_warning: false
+
+  # MAPIR Survey3W cameras
+  # Note: Survey3W has multiple variants. Configure via env var MAPIR_DATASET_NAME
+  # (see python_processing/multispectral_loader.py) or pass dataset_name explicitly.
+  #
+  # Variant 1: Standard visible-light RGB
+  mapir_survey3w_rgb:
+    band_order: ["R", "G", "B"]
+    band_count: 3
+    domain: "uav"
+    domain_mismatch_warning: false
+
+  # Variant 2: NIR + Green + Blue (NGB)
+  # Source channel order in the exported 3-channel image is treated as: [NIR, G, B]
+  # We standardize to [R, G, B, NIR] and zero-fill missing Red (R).
+  #
+  # IMPORTANT:
+  # - NDVI/SAVI require Red + NIR; without Red they will be reported as "band not available"
+  # - GNDVI requires Green + NIR; it will compute correctly for NGB.
+  mapir_survey3w_ngb:
+    band_order: ["R", "G", "B", "NIR"]
+    band_count: 4
+    source_band_order: ["NIR", "G", "B"]
+    domain: "uav"
+    domain_mismatch_warning: false
   
   # Default for unknown datasets
   default:

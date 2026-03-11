@@ -1,10 +1,11 @@
 /**
  * Google Maps-style Map Controls
- * Provides zoom, rotation, compass, and other map controls
+ * Dark theme — matches CropView design system
  */
 import React from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { Compass, Maximize2, Minimize2 } from 'lucide-react';
 
 export function ZoomControl() {
   const map = useMap();
@@ -18,16 +19,16 @@ export function ZoomControl() {
   };
 
   return (
-    <div 
-      className="leaflet-control"
+    <div
+      className="map-control"
       style={{
         position: 'absolute',
         top: '10px',
         left: '10px',
         zIndex: 1000,
-        background: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--bg-border)',
+        borderRadius: 'var(--radius-lg)',
         overflow: 'hidden',
         pointerEvents: 'auto'
       }}
@@ -41,8 +42,8 @@ export function ZoomControl() {
           width: '40px',
           height: '40px',
           border: 'none',
-          borderBottom: '1px solid #e0e0e0',
-          background: 'white',
+          borderBottom: '1px solid var(--bg-border)',
+          background: 'var(--bg-surface)',
           cursor: 'pointer',
           fontSize: '20px',
           lineHeight: '1',
@@ -50,12 +51,10 @@ export function ZoomControl() {
           transition: 'background 0.2s',
           userSelect: 'none',
           fontWeight: 'bold',
-          color: '#333'
+          color: 'var(--text-primary)'
         }}
-        onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
-        onMouseLeave={(e) => e.target.style.background = 'white'}
-        onMouseDown={(e) => e.target.style.background = '#e0e0e0'}
-        onMouseUp={(e) => e.target.style.background = '#f5f5f5'}
+        onMouseEnter={(e) => { e.target.style.background = 'var(--bg-hover)'; }}
+        onMouseLeave={(e) => { e.target.style.background = 'var(--bg-surface)'; }}
         title="Zoom in"
         aria-label="Zoom in"
       >
@@ -70,7 +69,7 @@ export function ZoomControl() {
           width: '40px',
           height: '40px',
           border: 'none',
-          background: 'white',
+          background: 'var(--bg-surface)',
           cursor: 'pointer',
           fontSize: '24px',
           lineHeight: '1',
@@ -78,12 +77,10 @@ export function ZoomControl() {
           transition: 'background 0.2s',
           userSelect: 'none',
           fontWeight: 'bold',
-          color: '#333'
+          color: 'var(--text-primary)'
         }}
-        onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
-        onMouseLeave={(e) => e.target.style.background = 'white'}
-        onMouseDown={(e) => e.target.style.background = '#e0e0e0'}
-        onMouseUp={(e) => e.target.style.background = '#f5f5f5'}
+        onMouseEnter={(e) => { e.target.style.background = 'var(--bg-hover)'; }}
+        onMouseLeave={(e) => { e.target.style.background = 'var(--bg-surface)'; }}
         title="Zoom out"
         aria-label="Zoom out"
       >
@@ -191,16 +188,16 @@ export function CompassControl({ rotation = 0, onRotationChange }) {
   };
 
   return (
-    <div 
-      className="leaflet-control"
+    <div
+      className="map-control"
       style={{
         position: 'absolute',
         top: '60px',
         left: '10px',
         zIndex: 1000,
-        background: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--bg-border)',
+        borderRadius: 'var(--radius-lg)',
         padding: '8px',
         display: 'flex',
         flexDirection: 'column',
@@ -218,38 +215,38 @@ export function CompassControl({ rotation = 0, onRotationChange }) {
           justifyContent: 'center',
           width: '32px',
           height: '24px',
-          border: '1px solid #e0e0e0',
-          borderRadius: '4px',
-          background: 'white',
+          border: '1px solid var(--bg-border)',
+          borderRadius: 'var(--radius-sm)',
+          background: 'var(--bg-surface)',
           cursor: 'pointer',
           fontSize: '16px',
           transition: 'all 0.2s',
           userSelect: 'none',
-          color: '#333',
+          color: 'var(--text-primary)',
           fontWeight: 'bold'
         }}
         onMouseEnter={(e) => {
-          e.target.style.background = '#f5f5f5';
-          e.target.style.borderColor = '#ccc';
+          e.target.style.background = 'var(--bg-hover)';
+          e.target.style.borderColor = 'var(--text-muted)';
         }}
         onMouseLeave={(e) => {
-          e.target.style.background = 'white';
-          e.target.style.borderColor = '#e0e0e0';
+          e.target.style.background = 'var(--bg-surface)';
+          e.target.style.borderColor = 'var(--bg-border)';
         }}
         title="Rotate counterclockwise"
         aria-label="Rotate counterclockwise"
       >
         ↺
       </button>
-      
+
       <div
         onClick={handleCompassClick}
         style={{
           width: '48px',
           height: '48px',
           borderRadius: '50%',
-          background: 'white',
-          border: '2px solid #4285f4',
+          background: 'var(--bg-surface)',
+          border: '2px solid var(--accent)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -259,38 +256,41 @@ export function CompassControl({ rotation = 0, onRotationChange }) {
           userSelect: 'none'
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = '#f8f9fa';
-          e.currentTarget.style.borderColor = '#1a73e8';
+          e.currentTarget.style.background = 'var(--bg-hover)';
+          e.currentTarget.style.borderColor = 'var(--accent-hover)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'white';
-          e.currentTarget.style.borderColor = '#4285f4';
+          e.currentTarget.style.background = 'var(--bg-surface)';
+          e.currentTarget.style.borderColor = 'var(--accent)';
         }}
         title="Click to reset rotation. Right-click drag or Ctrl+drag to rotate."
       >
         <div
           style={{
-            fontSize: '24px',
             transform: `rotate(${currentRotation}deg)`,
             transition: 'transform 0.3s ease',
-            lineHeight: '1'
+            lineHeight: '1',
+            color: 'var(--text-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
         >
-          🧭
+          <Compass size={24} strokeWidth={2} />
         </div>
         <div
           style={{
             position: 'absolute',
             bottom: '2px',
             fontSize: '10px',
-            color: '#666',
+            color: 'var(--text-muted)',
             fontWeight: 500
           }}
         >
           {currentRotation}°
         </div>
       </div>
-      
+
       <button
         onClick={() => handleRotate(15)}
         style={{
@@ -299,23 +299,23 @@ export function CompassControl({ rotation = 0, onRotationChange }) {
           justifyContent: 'center',
           width: '32px',
           height: '24px',
-          border: '1px solid #e0e0e0',
-          borderRadius: '4px',
-          background: 'white',
+          border: '1px solid var(--bg-border)',
+          borderRadius: 'var(--radius-sm)',
+          background: 'var(--bg-surface)',
           cursor: 'pointer',
           fontSize: '16px',
           transition: 'all 0.2s',
           userSelect: 'none',
-          color: '#333',
+          color: 'var(--text-primary)',
           fontWeight: 'bold'
         }}
         onMouseEnter={(e) => {
-          e.target.style.background = '#f5f5f5';
-          e.target.style.borderColor = '#ccc';
+          e.target.style.background = 'var(--bg-hover)';
+          e.target.style.borderColor = 'var(--text-muted)';
         }}
         onMouseLeave={(e) => {
-          e.target.style.background = 'white';
-          e.target.style.borderColor = '#e0e0e0';
+          e.target.style.background = 'var(--bg-surface)';
+          e.target.style.borderColor = 'var(--bg-border)';
         }}
         title="Rotate clockwise"
         aria-label="Rotate clockwise"
@@ -384,16 +384,16 @@ export function FullscreenControl() {
   }, [map]);
 
   return (
-    <div 
-      className="leaflet-control"
+    <div
+      className="map-control"
       style={{
         position: 'absolute',
         bottom: '10px',
         right: '10px',
         zIndex: 1000,
-        background: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--bg-border)',
+        borderRadius: 'var(--radius-lg)',
         overflow: 'hidden',
         pointerEvents: 'auto'
       }}
@@ -404,7 +404,7 @@ export function FullscreenControl() {
           width: '40px',
           height: '40px',
           border: 'none',
-          background: 'white',
+          background: 'var(--bg-surface)',
           cursor: 'pointer',
           fontSize: '18px',
           padding: 0,
@@ -413,15 +413,15 @@ export function FullscreenControl() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#333',
+          color: 'var(--text-primary)',
           fontWeight: 'bold'
         }}
-        onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
-        onMouseLeave={(e) => e.target.style.background = 'white'}
+        onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
+        onMouseLeave={(e) => e.target.style.background = 'var(--bg-surface)'}
         title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
         aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
       >
-        {isFullscreen ? '⤓' : '⤢'}
+        {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
       </button>
     </div>
   );

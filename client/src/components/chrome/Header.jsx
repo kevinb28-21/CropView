@@ -1,51 +1,39 @@
 /**
- * Header Component
- * Modern navigation header with distinctive styling
+ * Header — CropView
+ * Fixed top, horizontal nav, active route with accent, bottom border only
  */
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { LayoutDashboard, Map, BarChart3, Brain, Drone } from 'lucide-react';
+
+const navItems = [
+  { to: '/', end: true, label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/map', end: false, label: 'Map', icon: Map },
+  { to: '/analytics', end: false, label: 'Analytics', icon: BarChart3 },
+  { to: '/ml', end: false, label: 'ML Insights', icon: Brain },
+  { to: '/drone', end: false, label: 'Drone', icon: Drone },
+];
 
 export default function Header() {
   return (
     <header>
       <div>
-        <h1>Precision Agriculture</h1>
+        <h1>CropView</h1>
         <nav className="tabs" role="navigation" aria-label="Main navigation">
-          <NavLink 
-            to="/" 
-            end 
-            className={({ isActive }) => isActive ? 'tab active' : 'tab'}
-            aria-current="page"
-          >
-            Dashboard
-          </NavLink>
-          <NavLink 
-            to="/map" 
-            className={({ isActive }) => isActive ? 'tab active' : 'tab'}
-          >
-            Map
-          </NavLink>
-          <NavLink 
-            to="/analytics" 
-            className={({ isActive }) => isActive ? 'tab active' : 'tab'}
-          >
-            Analytics
-          </NavLink>
-          <NavLink 
-            to="/ml" 
-            className={({ isActive }) => isActive ? 'tab active' : 'tab'}
-          >
-            ML Insights
-          </NavLink>
-          <NavLink 
-            to="/drone" 
-            className={({ isActive }) => isActive ? 'tab active' : 'tab'}
-          >
-            Drone
-          </NavLink>
+          {navItems.map(({ to, end, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+              aria-current={end ? 'page' : undefined}
+            >
+              <Icon size={18} strokeWidth={2} aria-hidden />
+              {label}
+            </NavLink>
+          ))}
         </nav>
       </div>
     </header>
   );
 }
-

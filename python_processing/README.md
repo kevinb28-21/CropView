@@ -14,6 +14,10 @@ This directory contains the Python-based image processing pipeline for onion cro
 - `batch_test_ndvi.py`: Batch testing script for vegetation indices
 - `train_model.py`: ML model training script
 - `requirements.txt`: Python dependencies
+- `upload_images.py`: Mission upload helper (supports Node `/api/images` and Flask `/api/upload`)
+- `mapir_survey3w_pwm.py`: MAPIR Survey3(W) PWM trigger controller (Pi-only)
+- `capture_mapir_survey3w_interval.py`: MAPIR interval trigger + optional MAVLink GPS logging (Pi-only)
+- `sync_mapir_sdcard.py`: Copy images from mounted SD (DCIM) into mission folder
 
 ## Setup
 
@@ -85,3 +89,16 @@ app.post('/api/images', upload.single('image'), async (req, res) => {
 4. Add background job worker for automated processing
 5. Integrate with Raspberry Pi upload script
 
+## MAPIR Survey3W Notes
+
+If you are using a **MAPIR Survey3W**, capture is typically done via **PWM trigger** (not `picamera2`).
+See:
+- `Documentation/ml/IMAGE_CAPTURE.md` (MAPIR section)
+- `python_processing/mapir_survey3w_pwm.py`
+- `python_processing/capture_mapir_survey3w_interval.py`
+
+For multispectral variants (e.g., NGB = NIR+Green+Blue), set the schema on the processing machine:
+
+```bash
+export MAPIR_DATASET_NAME=mapir_survey3w_ngb   # or mapir_survey3w_rgb
+```

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../utils/api.js';
+import { Camera, Upload, Loader2, Check } from 'lucide-react';
 
 export default function UploadPanel({ onUploaded }) {
   const [file, setFile] = useState(null);
@@ -84,18 +85,16 @@ export default function UploadPanel({ onUploaded }) {
 
   return (
     <form onSubmit={onSubmit}>
-      <div 
-        style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
           gap: 'var(--space-4)',
           padding: 'var(--space-6)',
-          border: `2px dashed ${dragActive ? 'var(--color-primary)' : 'var(--color-border)'}`,
-          borderRadius: 'var(--radius-xl)',
-          background: dragActive ? 'var(--color-bg-hover)' : 'var(--color-bg-tertiary)',
-          transition: 'all var(--transition-base)',
-          position: 'relative',
-          overflow: 'hidden'
+          border: `1px dashed ${dragActive ? 'var(--accent)' : 'var(--bg-border)'}`,
+          borderRadius: 'var(--radius-lg)',
+          background: dragActive ? 'var(--bg-hover)' : 'var(--bg-surface-elevated)',
+          transition: 'border-color var(--transition-fast), background var(--transition-fast)',
         }}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -103,80 +102,69 @@ export default function UploadPanel({ onUploaded }) {
         onDrop={handleDrop}
       >
         <div style={{ textAlign: 'center' }}>
-          <div style={{ 
-            fontSize: '3rem', 
-            marginBottom: 'var(--space-3)',
-            filter: dragActive ? 'drop-shadow(0 0 8px var(--color-accent))' : 'none',
-            transition: 'filter var(--transition-base)'
-          }}>
-            📸
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-3)' }}>
+            <Camera size={40} strokeWidth={1.5} style={{ color: 'var(--text-muted)' }} aria-hidden />
           </div>
-          <label style={{ 
-            display: 'block', 
-            fontSize: 'var(--font-size-sm)', 
-            fontWeight: 'var(--font-weight-semibold)', 
-            marginBottom: 'var(--space-2)', 
-            color: 'var(--color-text-primary)',
-            cursor: 'pointer'
-          }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: 'var(--font-size-sm)',
+              fontWeight: 'var(--font-weight-medium)',
+              marginBottom: 'var(--space-2)',
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+            }}
+          >
             Select Field Image
           </label>
-          <input 
-            type="file" 
-            accept="image/*" 
+          <input
+            type="file"
+            accept="image/*"
             onChange={(e) => setFile(e.target.files?.[0] || null)}
-            style={{ 
-              width: '100%',
-              padding: 'var(--space-3)',
-              border: '2px solid var(--color-border)',
-              borderRadius: 'var(--radius-lg)',
-              background: 'var(--color-bg-secondary)',
-              fontFamily: 'var(--font-body)',
-              fontSize: 'var(--font-size-sm)',
-              cursor: 'pointer',
-              transition: 'all var(--transition-base)'
-            }}
+            className="input"
+            style={{ marginTop: 'var(--space-2)' }}
             disabled={busy}
-            onFocus={(e) => e.target.style.borderColor = 'var(--color-primary)'}
-            onBlur={(e) => e.target.style.borderColor = 'var(--color-border)'}
           />
         </div>
-        
-        <button 
-          type="submit" 
+
+        <button
+          type="submit"
           disabled={!file || busy}
           className="btn btn-primary"
-          style={{ 
+          style={{
             width: '100%',
-            opacity: (!file || busy) ? 0.5 : 1,
-            cursor: (!file || busy) ? 'not-allowed' : 'pointer'
+            opacity: !file || busy ? 0.5 : 1,
+            cursor: !file || busy ? 'not-allowed' : 'pointer',
           }}
         >
           {busy ? (
             <>
-              <span className="animate-pulse">⏳</span>
+              <Loader2 size={18} className="animate-pulse" aria-hidden />
               Uploading & Analyzing...
             </>
           ) : (
             <>
-              📤 Upload & Analyze
+              <Upload size={18} aria-hidden />
+              Upload & Analyze
             </>
           )}
         </button>
-        
+
         {file && (
-          <div style={{ 
-            fontSize: 'var(--font-size-xs)', 
-            color: 'var(--color-text-secondary)', 
-            padding: 'var(--space-3)', 
-            background: 'var(--color-bg-secondary)', 
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid var(--color-border)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-2)'
-          }}>
-            <span style={{ fontSize: '1.2rem' }}>✓</span>
+          <div
+            style={{
+              fontSize: 'var(--font-size-xs)',
+              color: 'var(--text-secondary)',
+              padding: 'var(--space-3)',
+              background: 'var(--bg-surface)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--bg-border)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+            }}
+          >
+            <Check size={16} style={{ color: 'var(--status-healthy)', flexShrink: 0 }} aria-hidden />
             <span style={{ flex: 1 }}>
               <strong>{file.name}</strong> ({(file.size / 1024).toFixed(1)} KB)
             </span>

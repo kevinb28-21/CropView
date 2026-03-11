@@ -50,10 +50,10 @@ function DragRectangle({ drawMode, onDraftChange }) {
         map.removeLayer(rectangleRef.current);
       }
       rectangleRef.current = L.rectangle([latlng, latlng], {
-        color: '#10b981',
+        color: '#7d8c4a',
         weight: 2,
-        fillColor: '#10b981',
-        fillOpacity: 0.2,
+        fillColor: '#7d8c4a',
+        fillOpacity: 0.15,
         dashArray: '6 6'
       }).addTo(map);
     };
@@ -154,9 +154,9 @@ export default function DashboardMap({
       zoomAnimation={true}
       markerZoomAnimation={true}
     >
-      <TileLayer 
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
-        attribution="&copy; OpenStreetMap contributors"
+      <TileLayer
+        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         updateWhenZooming={false}
         updateWhenIdle={true}
         keepBuffer={3}
@@ -187,17 +187,17 @@ export default function DashboardMap({
       )}
 
       {routeLatLngs.length > 1 && (
-        <Polyline pathOptions={{ color: '#2563eb', weight: 3 }} positions={routeLatLngs} />
+        <Polyline pathOptions={{ color: '#7d8c4a', weight: 3 }} positions={routeLatLngs} />
       )}
 
       {geofenceLatLngs.length >= 3 && (
-        <Polygon pathOptions={{ color: '#f59e0b', weight: 2, fillOpacity: 0.08 }} positions={geofenceLatLngs} />
+        <Polygon pathOptions={{ color: '#c4a035', weight: 2, fillOpacity: 0.12 }} positions={geofenceLatLngs} />
       )}
 
       {Array.isArray(draftGeofence) && draftGeofence.length >= 3 && (
-        <Polygon 
-          pathOptions={{ color: '#10b981', dashArray: '6 6', weight: 2, fillOpacity: 0.06 }} 
-          positions={draftGeofence.map(p => [p.lat, p.lng])} 
+        <Polygon
+          pathOptions={{ color: '#7d8c4a', dashArray: '6 6', weight: 2, fillOpacity: 0.1 }}
+          positions={draftGeofence.map(p => [p.lat, p.lng])}
         />
       )}
     </MapContainer>

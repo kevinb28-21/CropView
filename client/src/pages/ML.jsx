@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import ModelTraining from '../components/ModelTraining.jsx';
 import { api, buildImageUrl } from '../utils/api.js';
+import { Bot, BarChart2, Cpu } from 'lucide-react';
 
 // Demo predictions - always shown to ensure UI is populated
 const demoPredictions = [
@@ -166,15 +167,15 @@ export default function MLPage() {
 
   const getHealthColor = (status) => {
     const colors = {
-      'very_healthy': 'var(--color-success)',
-      'healthy': 'var(--color-success)',
-      'moderate': 'var(--color-info)',
-      'stressed': 'var(--color-warning)',
-      'poor': 'var(--color-error)',
-      'very_poor': 'var(--color-error)',
-      'diseased': 'var(--color-error)'
+      'very_healthy': 'var(--status-healthy)',
+      'healthy': 'var(--status-healthy)',
+      'moderate': 'var(--status-moderate)',
+      'stressed': 'var(--status-moderate)',
+      'poor': 'var(--status-poor)',
+      'very_poor': 'var(--status-poor)',
+      'diseased': 'var(--status-poor)'
     };
-    return colors[status?.toLowerCase()] || 'var(--color-text-secondary)';
+    return colors[status?.toLowerCase()] || 'var(--text-secondary)';
   };
 
   const getConfidenceBadge = (confidence) => {
@@ -188,11 +189,9 @@ export default function MLPage() {
     return (
       <div className="container">
         <div className="card">
-          <div style={{ textAlign: 'center', padding: 'var(--space-12)' }}>
-            <div className="animate-pulse" style={{ fontSize: '2rem', marginBottom: 'var(--space-4)' }}>
-              🤖
-            </div>
-            <div>Loading ML insights...</div>
+          <div style={{ textAlign: 'center', padding: 'var(--space-12)', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)' }}>
+            <Bot size={48} strokeWidth={1.5} className="animate-pulse" aria-hidden />
+            <span>Loading ML insights...</span>
           </div>
         </div>
       </div>
@@ -218,7 +217,7 @@ export default function MLPage() {
             </div>
             <div className="metric">
               <div className="metric-label">Avg Confidence</div>
-              <div className="metric-value" style={{ color: 'var(--color-success)' }}>
+              <div className="metric-value" style={{ color: 'var(--status-healthy)' }}>
                 {(modelStats.avgConfidence * 100).toFixed(1)}%
               </div>
             </div>
@@ -230,7 +229,7 @@ export default function MLPage() {
 
           {/* Predictions by Category */}
           <div style={{ marginBottom: 'var(--space-5)' }}>
-            <div style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-3)', color: 'var(--color-text-primary)' }}>
+            <div style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-3)', color: 'var(--text-primary)' }}>
               Predictions by Health Status
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
@@ -240,9 +239,9 @@ export default function MLPage() {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: 'var(--space-3)',
-                  background: 'var(--color-bg-secondary)',
+                  background: 'var(--bg-surface-elevated)',
                   borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--color-border)'
+                  border: '1px solid var(--bg-border)'
                 }}>
                   <span style={{ 
                     textTransform: 'capitalize', 
@@ -255,7 +254,7 @@ export default function MLPage() {
                     <div style={{
                       width: 120,
                       height: 8,
-                      background: 'var(--color-bg-tertiary)',
+                      background: 'var(--bg-border)',
                       borderRadius: 'var(--radius-full)',
                       overflow: 'hidden'
                     }}>
@@ -269,7 +268,7 @@ export default function MLPage() {
                     <span style={{ 
                       fontSize: 'var(--font-size-sm)', 
                       fontWeight: 'var(--font-weight-semibold)', 
-                      color: 'var(--color-text-primary)',
+                      color: 'var(--text-primary)',
                       minWidth: 24,
                       textAlign: 'right'
                     }}>
@@ -283,22 +282,22 @@ export default function MLPage() {
 
           {/* Predictions by Crop */}
           <div>
-            <div style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-3)', color: 'var(--color-text-primary)' }}>
+            <div style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-3)', color: 'var(--text-primary)' }}>
               Predictions by Crop Type
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
               {Object.entries(modelStats.cropCounts).map(([crop, count]) => (
                 <div key={crop} style={{
                   padding: 'var(--space-2) var(--space-3)',
-                  background: 'var(--color-bg-secondary)',
+                  background: 'var(--bg-surface-elevated)',
                   borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--color-border)',
+                  border: '1px solid var(--bg-border)',
                   fontSize: 'var(--font-size-sm)'
                 }}>
                   <span style={{ textTransform: 'capitalize', fontWeight: 'var(--font-weight-medium)' }}>
                     {crop}
                   </span>
-                  <span style={{ marginLeft: 'var(--space-2)', color: 'var(--color-text-tertiary)' }}>
+                  <span style={{ marginLeft: 'var(--space-2)', color: 'var(--text-muted)' }}>
                     ({count})
                   </span>
                 </div>
@@ -319,8 +318,8 @@ export default function MLPage() {
                 style={{
                   cursor: 'pointer',
                   border: selectedPrediction?.image_id === pred.image_id 
-                    ? '2px solid var(--color-primary)' 
-                    : '1px solid var(--color-border)',
+                    ? '2px solid var(--accent)' 
+                    : '1px solid var(--bg-border)',
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -328,14 +327,14 @@ export default function MLPage() {
                   <div style={{ 
                     fontWeight: 'var(--font-weight-semibold)', 
                     fontSize: 'var(--font-size-sm)', 
-                    color: 'var(--color-text-primary)',
+                    color: 'var(--text-primary)',
                     marginBottom: 'var(--space-1)'
                   }}>
                     {pred.filename}
                   </div>
                   <div style={{ 
                     fontSize: 'var(--font-size-xs)', 
-                    color: 'var(--color-text-tertiary)',
+                    color: 'var(--text-muted)',
                     display: 'flex',
                     gap: 'var(--space-2)',
                     flexWrap: 'wrap'
@@ -364,15 +363,15 @@ export default function MLPage() {
             
             <div style={{
               padding: 'var(--space-4)',
-              background: 'var(--color-bg-secondary)',
+              background: 'var(--bg-surface-elevated)',
               borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--color-border)',
+              border: '1px solid var(--bg-border)',
               marginBottom: 'var(--space-4)'
             }}>
               <div style={{ 
                 fontSize: 'var(--font-size-lg)', 
                 fontWeight: 'var(--font-weight-semibold)',
-                color: 'var(--color-text-primary)',
+                color: 'var(--text-primary)',
                 marginBottom: 'var(--space-3)'
               }}>
                 {selectedPrediction.filename}
@@ -409,12 +408,12 @@ export default function MLPage() {
             {/* Vegetation Indices */}
             <div style={{
               padding: 'var(--space-4)',
-              background: 'var(--color-bg-secondary)',
+              background: 'var(--bg-surface-elevated)',
               borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--color-border)',
+              border: '1px solid var(--bg-border)',
               marginBottom: 'var(--space-4)'
             }}>
-              <div style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-3)', color: 'var(--color-text-primary)' }}>
+              <div style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-3)', color: 'var(--text-primary)' }}>
                 Vegetation Indices
               </div>
               <div className="metrics">
@@ -424,8 +423,8 @@ export default function MLPage() {
                     <div className="metric-value" style={{ fontSize: 'var(--font-size-lg)' }}>
                       {selectedPrediction.ndvi_mean.toFixed(3)}
                     </div>
-                    <div style={{ height: 4, background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-full)', marginTop: 'var(--space-2)', overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.max(0, Math.min(100, (selectedPrediction.ndvi_mean + 1) * 50))}%`, height: '100%', background: 'var(--color-success)' }} />
+                    <div style={{ height: 4, background: 'var(--bg-border)', borderRadius: 'var(--radius-sm)', marginTop: 'var(--space-2)', overflow: 'hidden' }}>
+                      <div style={{ width: `${Math.max(0, Math.min(100, (selectedPrediction.ndvi_mean + 1) * 50))}%`, height: '100%', background: 'var(--status-healthy)' }} />
                     </div>
                   </div>
                 )}
@@ -435,8 +434,8 @@ export default function MLPage() {
                     <div className="metric-value" style={{ fontSize: 'var(--font-size-lg)' }}>
                       {selectedPrediction.savi_mean.toFixed(3)}
                     </div>
-                    <div style={{ height: 4, background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-full)', marginTop: 'var(--space-2)', overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.max(0, Math.min(100, (selectedPrediction.savi_mean + 1) * 50))}%`, height: '100%', background: 'var(--color-info)' }} />
+                    <div style={{ height: 4, background: 'var(--bg-border)', borderRadius: 'var(--radius-sm)', marginTop: 'var(--space-2)', overflow: 'hidden' }}>
+                      <div style={{ width: `${Math.max(0, Math.min(100, (selectedPrediction.savi_mean + 1) * 50))}%`, height: '100%', background: 'var(--accent)' }} />
                     </div>
                   </div>
                 )}
@@ -446,8 +445,8 @@ export default function MLPage() {
                     <div className="metric-value" style={{ fontSize: 'var(--font-size-lg)' }}>
                       {selectedPrediction.gndvi_mean.toFixed(3)}
                     </div>
-                    <div style={{ height: 4, background: 'var(--color-bg-tertiary)', borderRadius: 'var(--radius-full)', marginTop: 'var(--space-2)', overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.max(0, Math.min(100, (selectedPrediction.gndvi_mean + 1) * 50))}%`, height: '100%', background: 'var(--color-warning)' }} />
+                    <div style={{ height: 4, background: 'var(--bg-border)', borderRadius: 'var(--radius-sm)', marginTop: 'var(--space-2)', overflow: 'hidden' }}>
+                      <div style={{ width: `${Math.max(0, Math.min(100, (selectedPrediction.gndvi_mean + 1) * 50))}%`, height: '100%', background: 'var(--status-moderate)' }} />
                     </div>
                   </div>
                 )}
@@ -456,10 +455,11 @@ export default function MLPage() {
 
             <div style={{
               padding: 'var(--space-3)',
-              background: 'var(--color-info-bg)',
+              background: 'var(--bg-surface-elevated)',
               borderRadius: 'var(--radius-md)',
               fontSize: 'var(--font-size-xs)',
-              color: 'var(--color-info-text)'
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--bg-border)'
             }}>
               <strong>Processed:</strong> {new Date(selectedPrediction.processed_at).toLocaleString()}
             </div>

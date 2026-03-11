@@ -27,7 +27,7 @@ Raspberry Pi 4
 1. **Camera**
    - Raspberry Pi Camera Module v2/v3, or
    - USB camera (tested with Logitech C920), or
-   - Multispectral camera (e.g., Parrot Sequoia)
+   - Multispectral/survey camera (e.g., MAPIR Survey3W)
 
 2. **GPS/Telemetry**
    - Pixhawk flight controller connected via USB (`/dev/ttyUSB0`) or Serial (`/dev/serial0`)
@@ -147,6 +147,56 @@ if __name__ == "__main__":
         capture_interval(camera, args.interval, args.duration, args.output)
     finally:
         camera.stop()
+```
+
+---
+
+### MAPIR Survey3W (Recommended Hardware Integration Notes)
+
+If you're using a **MAPIR Survey3W**, it is typically controlled via **PWM trigger** (not `picamera2`).
+MAPIR documents PWM control where the camera interprets pulse widths as commands:
+
+- **1000µs**: idle (keep sending)
+- **1500µs**: mount/unmount SD card over USB (toggle)
+- **2000µs**: trigger capture
+
+#### What this means for this project
+
+- **Capture**: The Raspberry Pi can trigger captures by outputting PWM on a GPIO pin (commonly BCM18).
+- **Storage**: Images are written to the camera SD card.
+- **Transfer**: After the flight, you either:
+  - mount the camera SD over USB (PWM 1500µs) and copy files, or
+  - physically remove the microSD card and copy files.
+
+#### Repo changes added for MAPIR
+
+This repository includes Pi-oriented MAPIR helpers:
+
+- `python_processing/mapir_survey3w_pwm.py`: PWM controller (Pi-only dependency: `RPi.GPIO`)
+- `python_processing/capture_mapir_survey3w_interval.py`: interval trigger + optional MAVLink GPS logging
+
+#### Multispectral band considerations (Survey3W variants)
+
+Survey3W comes in multiple variants. Two common ones are:
+
+1) **Visible-light RGB** (standard R/G/B). Works as normal.
+2) **NGB (NIR+Green+Blue)**. This supports **GNDVI** (needs NIR+G) but does **not** provide a true Red band,
+   so **NDVI/SAVI cannot be computed** and will be reported as "band not available".
+
+To help the processing pipeline interpret MAPIR imagery correctly, `python_processing/datasets/dataset_registry.yaml`
+includes:
+- `mapir_survey3w_rgb`
+- `mapir_survey3w_ngb`
+
+And `python_processing/multispectral_loader.py` includes a best-effort heuristic that routes MAPIR images to one of
+those schemas using either:
+- EXIF Make/Model containing "MAPIR"/"Survey3", or
+- the file path containing "mapir"
+
+You can override the default with an environment variable on the processing machine:
+
+```bash
+export MAPIR_DATASET_NAME=mapir_survey3w_ngb   # or mapir_survey3w_rgb
 ```
 
 #### Usage
@@ -508,6 +558,11 @@ for img_file in IMAGE_DIR.glob("*.jpg"):
         response = requests.post(UPLOAD_URL, files=files, data=data)
         print(f"Uploaded: {img_file.name}")
 ```
+
+> Note: The current dashboard backend uses Node `POST /api/images` on port **5050**.  
+> The repo upload helper `python_processing/upload_images.py` supports both:
+> - `--api node` (uploads to `/api/images`)
+> - `--api flask` (uploads to `/api/upload`)
 
 ## Troubleshooting
 

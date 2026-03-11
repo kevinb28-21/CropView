@@ -7,7 +7,7 @@ import React from 'react';
 export default function MLExplanation({ analysis, image }) {
   if (!analysis || !analysis.healthStatus) {
     return (
-      <div style={{ padding: 20, textAlign: 'center', color: '#6b7280' }}>
+      <div style={{ padding: 'var(--space-5)', textAlign: 'center', color: 'var(--text-muted)' }}>
         No ML analysis available for this image
       </div>
     );
@@ -117,204 +117,87 @@ export default function MLExplanation({ analysis, image }) {
 
   const getHealthColor = (status) => {
     const colorMap = {
-      'very_healthy': '#059669',
-      'healthy': '#10b981',
-      'moderate': '#f59e0b',
-      'poor': '#f97316',
-      'very_poor': '#dc2626',
-      'diseased': '#dc2626',
-      'stressed': '#f59e0b',
-      'weeds': '#f97316'
+      'very_healthy': 'var(--status-healthy)',
+      'healthy': 'var(--status-healthy)',
+      'moderate': 'var(--status-moderate)',
+      'poor': 'var(--status-poor)',
+      'very_poor': 'var(--status-poor)',
+      'diseased': 'var(--status-poor)',
+      'stressed': 'var(--status-moderate)',
+      'weeds': 'var(--status-moderate)'
     };
-    return colorMap[status] || '#6b7280';
+    return colorMap[status] || 'var(--text-muted)';
   };
 
   const recommendations = getRecommendations();
 
   return (
     <div>
-      {/* Main Explanation */}
-      <div style={{
-        padding: 16,
-        background: '#f0f9ff',
-        border: '1px solid #bfdbfe',
-        borderRadius: 8,
-        marginBottom: 20
-      }}>
-        <div style={{ fontWeight: 600, marginBottom: 8, color: '#1e40af' }}>
-          Why this classification?
-        </div>
-        <div style={{ color: '#1e3a8a', lineHeight: 1.6 }}>
-          {generateExplanation()}
-        </div>
+      <div style={{ padding: 'var(--space-4)', background: 'var(--bg-surface-elevated)', border: '1px solid var(--bg-border)', borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-5)' }}>
+        <div style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)', color: 'var(--text-primary)' }}>Why this classification?</div>
+        <div style={{ color: 'var(--text-secondary)', lineHeight: 'var(--line-height-relaxed)' }}>{generateExplanation()}</div>
       </div>
 
-      {/* Confidence and Status */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: 12,
-        marginBottom: 20
-      }}>
-        <div style={{
-          padding: 16,
-          background: '#f9fafb',
-          borderRadius: 8,
-          border: `2px solid ${getHealthColor(healthStatus)}`
-        }}>
-          <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-            Predicted Status
-          </div>
-          <div style={{ 
-            fontSize: 20, 
-            fontWeight: 700,
-            color: getHealthColor(healthStatus),
-            textTransform: 'capitalize'
-          }}>
-            {healthStatus.replace('_', ' ')}
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-5)' }}>
+        <div style={{ padding: 'var(--space-4)', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--bg-border)', borderLeftWidth: 3, borderLeftColor: getHealthColor(healthStatus) }}>
+          <div className="metric-label" style={{ marginBottom: 'var(--space-2)' }}>Predicted Status</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-semibold)', color: getHealthColor(healthStatus), textTransform: 'capitalize' }}>{healthStatus.replace('_', ' ')}</div>
         </div>
 
         {confidence > 0 && (
-          <div style={{
-            padding: 16,
-            background: '#f9fafb',
-            borderRadius: 8,
-            border: '1px solid #e5e7eb'
-          }}>
-            <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-              Model Confidence
-            </div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#111827' }}>
-              {(confidence * 100).toFixed(1)}%
-            </div>
-            <div style={{ 
-              marginTop: 8,
-              height: 6,
-              background: '#e5e7eb',
-              borderRadius: 3,
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                width: `${confidence * 100}%`,
-                height: '100%',
-                background: getHealthColor(healthStatus),
-                transition: 'width 0.3s'
-              }} />
+          <div style={{ padding: 'var(--space-4)', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--bg-border)' }}>
+            <div className="metric-label" style={{ marginBottom: 'var(--space-2)' }}>Model Confidence</div>
+            <div className="metric-value">{(confidence * 100).toFixed(1)}<span className="unit">%</span></div>
+            <div style={{ marginTop: 'var(--space-2)', height: 6, background: 'var(--bg-border)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ width: `${confidence * 100}%`, height: '100%', background: getHealthColor(healthStatus), transition: 'width 0.2s' }} />
             </div>
           </div>
         )}
 
         {analysis.modelVersion && (
-          <div style={{
-            padding: 16,
-            background: '#f9fafb',
-            borderRadius: 8,
-            border: '1px solid #e5e7eb'
-          }}>
-            <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-              Model Version
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>
-              {analysis.modelVersion}
-            </div>
+          <div style={{ padding: 'var(--space-4)', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--bg-border)' }}>
+            <div className="metric-label" style={{ marginBottom: 'var(--space-2)' }}>Model Version</div>
+            <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)', color: 'var(--text-primary)', wordBreak: 'break-word' }}>{analysis.modelVersion}</div>
           </div>
         )}
       </div>
 
-      {/* Feature Importance */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontWeight: 600, marginBottom: 12, color: '#111827' }}>
-          Feature Contribution
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ marginBottom: 'var(--space-5)' }}>
+        <div style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-3)', color: 'var(--text-primary)' }}>Feature Contribution</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {['ndvi', 'savi', 'gndvi'].map(feature => {
             const contrib = contributions[feature];
             if (contrib === 0) return null;
-            
             return (
               <div key={feature}>
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between',
-                  marginBottom: 4,
-                  fontSize: 12
-                }}>
-                  <span style={{ textTransform: 'uppercase', fontWeight: 500 }}>
-                    {feature}
-                  </span>
-                  <span style={{ color: '#6b7280' }}>
-                    {(contrib * 100).toFixed(1)}%
-                  </span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-1)', fontSize: 'var(--font-size-xs)' }}>
+                  <span style={{ textTransform: 'uppercase', fontWeight: 'var(--font-weight-medium)' }}>{feature}</span>
+                  <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{(contrib * 100).toFixed(1)}%</span>
                 </div>
-                <div style={{
-                  height: 8,
-                  background: '#e5e7eb',
-                  borderRadius: 4,
-                  overflow: 'hidden'
-                }}>
-                  <div style={{
-                    width: `${contrib * 100}%`,
-                    height: '100%',
-                    background: feature === 'ndvi' ? '#3b82f6' : 
-                               feature === 'savi' ? '#10b981' : '#f59e0b',
-                    transition: 'width 0.3s'
-                  }} />
+                <div style={{ height: 8, background: 'var(--bg-border)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ width: `${contrib * 100}%`, height: '100%', background: 'var(--accent)', transition: 'width 0.2s' }} />
                 </div>
               </div>
             );
           })}
           <div>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between',
-              marginBottom: 4,
-              fontSize: 12
-            }}>
-              <span style={{ fontWeight: 500 }}>Visual Features</span>
-              <span style={{ color: '#6b7280' }}>
-                {(contributions.visual * 100).toFixed(1)}%
-              </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-1)', fontSize: 'var(--font-size-xs)' }}>
+              <span style={{ fontWeight: 'var(--font-weight-medium)' }}>Visual Features</span>
+              <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{(contributions.visual * 100).toFixed(1)}%</span>
             </div>
-            <div style={{
-              height: 8,
-              background: '#e5e7eb',
-              borderRadius: 4,
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                width: `${contributions.visual * 100}%`,
-                height: '100%',
-                background: '#8b5cf6',
-                transition: 'width 0.3s'
-              }} />
+            <div style={{ height: 8, background: 'var(--bg-border)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ width: `${contributions.visual * 100}%`, height: '100%', background: 'var(--text-muted)', transition: 'width 0.2s' }} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Recommendations */}
       <div>
-        <div style={{ fontWeight: 600, marginBottom: 12, color: '#111827' }}>
-          Recommendations
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-3)', color: 'var(--text-primary)' }}>Recommendations</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {recommendations.map((rec, idx) => (
-            <div
-              key={idx}
-              style={{
-                padding: 12,
-                background: '#f9fafb',
-                borderRadius: 6,
-                border: '1px solid #e5e7eb',
-                fontSize: 13,
-                color: '#374151',
-                display: 'flex',
-                alignItems: 'start',
-                gap: 8
-              }}
-            >
-              <span style={{ color: '#3b82f6' }}>→</span>
+            <div key={idx} style={{ padding: 'var(--space-3)', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-md)', border: '1px solid var(--bg-border)', fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)' }}>
+              <span style={{ color: 'var(--accent)', flexShrink: 0 }}>→</span>
               <span>{rec}</span>
             </div>
           ))}

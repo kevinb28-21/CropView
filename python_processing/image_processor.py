@@ -21,6 +21,28 @@ except ImportError:
     logger.warning("multispectral_loader not available, using RGB-only mode")
 
 
+def _band_available(band_schema: Optional[Dict], band_name: str) -> bool:
+    """
+    Check whether a band is truly available (not just present in band_order).
+    This prevents computing indices on zero-filled "missing" bands (e.g., MAPIR NGB
+    images standardized to [R,G,B,NIR] where R is missing/zero-filled).
+    """
+    if not band_schema:
+        return False
+    band_order = band_schema.get("band_order") or []
+    if band_name not in band_order:
+        return False
+    # If missing_bands explicitly tracks it, trust that.
+    missing = set(band_schema.get("missing_bands") or [])
+    if band_name in missing:
+        return False
+    # If source_band_indices exists and says None, it's missing (zero-filled).
+    sbi = band_schema.get("source_band_indices") or {}
+    if band_name in sbi and sbi.get(band_name) is None:
+        return False
+    return True
+
+
 def calculate_ndvi(image_path: str, band_schema: Optional[Dict] = None, 
                    image_array: Optional[np.ndarray] = None) -> Dict:
     """
@@ -58,7 +80,7 @@ def calculate_ndvi(image_path: str, band_schema: Optional[Dict] = None,
     band_order = band_schema.get('band_order', ['R', 'G', 'B'])
     
     # Check if required bands (R and NIR) are available
-    if 'NIR' not in band_order:
+    if not _band_available(band_schema, 'NIR'):
         logger.warning("NDVI calculation requires NIR band, which is not available")
         return {
             'ndvi_mean': None,
@@ -69,7 +91,7 @@ def calculate_ndvi(image_path: str, band_schema: Optional[Dict] = None,
             'band_schema': band_schema
         }
     
-    if 'R' not in band_order:
+    if not _band_available(band_schema, 'R'):
         logger.warning("NDVI calculation requires R band, which is not available")
         return {
             'ndvi_mean': None,
@@ -195,7 +217,7 @@ def calculate_gndvi(image_path: str, band_schema: Optional[Dict] = None,
     band_order = band_schema.get('band_order', ['R', 'G', 'B'])
     
     # Check if required bands (G and NIR) are available
-    if 'NIR' not in band_order:
+    if not _band_available(band_schema, 'NIR'):
         logger.warning("GNDVI calculation requires NIR band, which is not available")
         return {
             'gndvi_mean': None,
@@ -206,7 +228,7 @@ def calculate_gndvi(image_path: str, band_schema: Optional[Dict] = None,
             'band_schema': band_schema
         }
     
-    if 'G' not in band_order:
+    if not _band_available(band_schema, 'G'):
         logger.warning("GNDVI calculation requires G band, which is not available")
         return {
             'gndvi_mean': None,
@@ -304,7 +326,7 @@ def calculate_savi(image_path: str, L: float = 0.5,
     band_order = band_schema.get('band_order', ['R', 'G', 'B'])
     
     # Check if NIR is available
-    if 'NIR' not in band_order:
+    if not _band_available(band_schema, 'NIR'):
         logger.warning("SAVI calculation requires NIR band, which is not available in RGB image")
         return {
             'savi_mean': None,
@@ -327,6 +349,17 @@ def calculate_savi(image_path: str, L: float = 0.5,
             'savi_min': None,
             'savi_max': None,
             'error': 'Required bands not found',
+            'band_schema': band_schema
+        }
+    
+    if not _band_available(band_schema, 'R'):
+        logger.warning("SAVI calculation requires R band, which is not available")
+        return {
+            'savi_mean': None,
+            'savi_std': None,
+            'savi_min': None,
+            'savi_max': None,
+            'error': 'R band not available',
             'band_schema': band_schema
         }
     
