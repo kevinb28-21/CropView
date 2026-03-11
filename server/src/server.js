@@ -92,6 +92,13 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+// Field name must match UploadPanel.jsx FormData.append key (client sends 'image').
+// Accept both 'image' and 'file' to avoid MulterError: Unexpected field from older or alternate clients.
+const uploadImage = upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'file', maxCount: 1 }
+]);
+
 /**
  * Note: Images saved to database with status 'uploaded' will be automatically
  * processed by the background worker (python_processing/background_worker.py).
@@ -130,10 +137,12 @@ app.get('/api/health', async (req, res) => {
 app.use('/uploads', express.static(UPLOAD_DIR));
 
 // Upload image and save to database
-app.post('/api/images', upload.single('image'), async (req, res) => {
-  if (!req.file) {
+app.post('/api/images', uploadImage, async (req, res) => {
+  const file = (req.files?.image?.[0] || req.files?.file?.[0]) ?? req.file;
+  if (!file) {
     return res.status(400).json({ error: 'No image uploaded' });
   }
+  req.file = file;
   
   if (!dbConnected) {
     return res.status(503).json({ error: 'Database not connected' });
@@ -198,18 +207,24 @@ app.post('/api/images', upload.single('image'), async (req, res) => {
     });
     
     console.log(`✓ Image ${imageId} saved to database (status: uploaded)`);
-    console.log(`  Background worker will process it automatically`);
     
     // Trigger immediate processing via Flask (fire-and-forget; do not block response)
     const flaskProcessUrl = process.env.FLASK_PROCESS_URL || 'http://localhost:5001/api/process';
-    setImmediate(() => {
-      fetch(flaskProcessUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_id: imageId }),
-      }).catch((err) => {
-        console.error('Flask process trigger failed (worker will pick up on next poll):', err.message || err);
-      });
+    setImmediate(async () => {
+      try {
+        const res = await fetch(flaskProcessUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_id: imageId }),
+        });
+        if (res.ok) {
+          const pool = getDbPool();
+          await pool.query('UPDATE images SET processing_status = $1 WHERE id = $2', ['processing', imageId]);
+          console.log(`[AutoProcess] Triggered processing for image ${imageId}`);
+        }
+      } catch (err) {
+        console.log(`[AutoProcess] Flask unavailable, background worker will handle image ${imageId}`);
+      }
     });
     
     // Get the saved image record
@@ -474,7 +489,7 @@ app.get('/api/ml/status', async (req, res) => {
     const useMultiCrop = process.env.USE_MULTI_CROP_MODEL || 'true';
     const multiCropModelPath = process.env.MULTI_CROP_MODEL_PATH;
     const multiCropModelDir = process.env.MULTI_CROP_MODEL_DIR || path.resolve(modelsBaseDir, 'multi_crop');
-    const singleCropModelPath = process.env.ONION_MODEL_PATH || path.resolve(modelsBaseDir, 'onion_crop_health_model.h5');
+    const singleCropModelPath = process.env.ONION_MODEL_PATH || path.resolve(modelsBaseDir, 'onion_crop_best_model.h5');
     const modelChannels = process.env.MODEL_CHANNELS || '3';
     
     let modelAvailable = false;

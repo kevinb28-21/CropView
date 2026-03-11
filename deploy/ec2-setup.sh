@@ -266,13 +266,13 @@ echo ""
 echo "Step 16: Setting up PM2..."
 cd ~/Capstone_Interface/server
 mkdir -p logs
-pm2 start ecosystem.config.js || print_warning "PM2 config may need to be created first"
-pm2 save
+pm2 start ecosystem.config.cjs 2>/dev/null || pm2 start ecosystem.config.js || print_warning "PM2 server config not found"
 
 cd ~/Capstone_Interface/python_processing
 mkdir -p logs
-pm2 start ecosystem.config.js || print_warning "PM2 config may need to be created first"
-pm2 start worker.config.js || print_warning "PM2 config may need to be created first"
+pm2 start ecosystem.config.cjs 2>/dev/null || pm2 start ecosystem.config.js || print_warning "PM2 python config not found"
+# If using separate worker config (legacy), start it; ecosystem.config.cjs now includes background-worker
+pm2 start worker.config.cjs 2>/dev/null || pm2 start worker.config.js 2>/dev/null || true
 pm2 save
 
 # Setup PM2 startup
