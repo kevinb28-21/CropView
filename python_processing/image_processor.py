@@ -404,7 +404,7 @@ def classify_crop_health_tensorflow(image_path: str, model_path: Optional[str] =
     Args:
         image_path: Path to the input image
         model_path: Optional path to saved TensorFlow model
-                    (defaults to ./models/onion_crop_health_model.h5)
+                    (defaults to ./models/onion_crop_best_model.h5)
         
     Returns:
         Dictionary with classification results including:
@@ -420,7 +420,7 @@ def classify_crop_health_tensorflow(image_path: str, model_path: Optional[str] =
     # Default model path
     if model_path is None:
         # Try environment variable first
-        model_path = os.getenv('ONION_MODEL_PATH', './models/onion_crop_health_model.h5')
+        model_path = os.getenv('ONION_MODEL_PATH', './models/onion_crop_best_model.h5')
     
     # Check if model exists
     if not os.path.exists(model_path):

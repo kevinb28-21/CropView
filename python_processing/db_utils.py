@@ -83,7 +83,7 @@ def get_pending_images(limit: int = 10) -> List[Dict]:
             return results
     except Exception as e:
         logger.error(f"Error fetching pending images: {e}", exc_info=True)
-            return []
+        return []
     finally:
         if conn:
             return_db_connection(conn)

@@ -25,6 +25,9 @@
   --status-healthy: #7d8c4a;
   --status-moderate: #c4a035;
   --status-poor: #b85450;
+  --status-healthy-rgb: 125, 140, 74;
+  --status-moderate-rgb: 196, 160, 53;
+  --status-poor-rgb: 184, 84, 80;
 
   /* ============ Typography ============ */
   --font-mono: 'DM Mono', 'SF Mono', Consolas, monospace;

@@ -50,6 +50,9 @@ SERVER_UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'se
 UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', SERVER_UPLOAD_DIR if os.path.exists(SERVER_UPLOAD_DIR) else './uploads')
 PROCESSED_FOLDER = os.getenv('PROCESSED_FOLDER', './processed')
 
+# Accepted image file extensions for processing
+ALLOWED_IMAGE_EXTENSIONS = ('.tif', '.tiff', '.jpg', '.jpeg', '.png', '.raw', '.RAW')
+
 # Ensure directories exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
@@ -284,7 +287,7 @@ def load_model_once():
                 multi_crop_model_path = max(model_files, key=os.path.getmtime)
     
     # Fallback to single-crop model
-    single_crop_model_path = os.getenv('ONION_MODEL_PATH', './models/onion_crop_health_model.h5')
+    single_crop_model_path = os.getenv('ONION_MODEL_PATH', './models/onion_crop_best_model.h5')
     
     model_path = None
     model_type = None
@@ -368,6 +371,14 @@ def process_image(image_record: dict) -> bool:
         except FileNotFoundError as e:
             logger.error(f"[{image_id}] Image file not found: {e}")
             set_processing_failed(image_id, str(e))
+            return False
+
+        # Ensure we only attempt to process known image formats (including RAW)
+        _, ext = os.path.splitext(str(image_path))
+        if ext.lower() not in tuple(e.lower() for e in ALLOWED_IMAGE_EXTENSIONS):
+            msg = f"Unsupported image extension '{ext}' for image {image_id}"
+            logger.error(msg)
+            set_processing_failed(image_id, msg)
             return False
         
         # Step 3: Perform analysis (includes NDVI, SAVI, GNDVI)
@@ -621,7 +632,7 @@ TESTING CHECKLIST - Background Worker & Image Processing Pipeline
 6. VERIFY MODEL STATUS:
    - Ensure there is at least one model file in:
      - python_processing/models/multi_crop/*_final.h5 OR
-     - python_processing/models/onion_crop_health_model.h5
+     - python_processing/models/onion_crop_best_model.h5
    - Hit GET http://localhost:5050/api/ml/status:
      - Expect: model_available: true
      - model_type: 'multi_crop' or 'single_crop'

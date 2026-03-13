@@ -11,6 +11,8 @@ import logging
 import yaml
 import os
 
+from mapir_raw_converter import convert_mapir_raw_to_tiff
+
 logger = logging.getLogger(__name__)
 
 # Try to import tifffile first (preferred - lightweight, no GDAL dependency)
@@ -319,6 +321,19 @@ def load_multispectral_image(
     """
     image_path = Path(image_path)
     suffix = image_path.suffix.lower()
+
+    # Auto-convert MAPIR RAW to TIFF before loading
+    raw_str = str(image_path)
+    if raw_str.lower().endswith('.raw'):
+        tiff_path = raw_str.replace('.raw', '_converted.tif').replace('.RAW', '_converted.tif')
+        tiff_path_path = Path(tiff_path)
+        if not tiff_path_path.exists():
+            convert_mapir_raw_to_tiff(raw_str, tiff_path)
+        image_path = tiff_path_path
+        suffix = image_path.suffix.lower()
+        is_mapir_rgn = True
+    else:
+        is_mapir_rgn = False
     
     # Get band schema from registry or detect
     if band_order:
@@ -423,6 +438,25 @@ def load_multispectral_image(
                     img, source_band_order, target_band_order
                 )
                 band_schema['missing_bands'] = missing_bands
+
+            # Special handling for MAPIR RGN TIFF produced from RAW:
+            # image has 3 bands [R, G, NIR] and no true Blue channel.
+            if is_mapir_rgn and img.shape[2] == 3:
+                blue_band = np.zeros_like(img[:, :, 0])
+                img = np.stack([img[:, :, 0], img[:, :, 1], blue_band, img[:, :, 2]], axis=-1)
+
+                band_schema['bands'] = STANDARD_MULTISPECTRAL_BANDS
+                band_schema['band_order'] = STANDARD_MULTISPECTRAL_BANDS
+                band_schema['band_count'] = 4
+                band_schema['schema'] = 'RGN'
+                # R, G, NIR come from source data; B is synthetic/zero-filled.
+                band_schema['source_band_indices'] = {
+                    'R': 0,
+                    'G': 1,
+                    'B': None,
+                    'NIR': 2,
+                }
+                band_schema['missing_bands'] = ['B']
             
             # Resize
             if img.shape[:2] != target_size:
@@ -467,6 +501,23 @@ def load_multispectral_image(
                     img, source_band_order, target_band_order
                 )
                 band_schema['missing_bands'] = missing_bands
+
+            # Special handling for MAPIR RGN TIFF in rasterio path
+            if is_mapir_rgn and img.shape[2] == 3:
+                blue_band = np.zeros_like(img[:, :, 0])
+                img = np.stack([img[:, :, 0], img[:, :, 1], blue_band, img[:, :, 2]], axis=-1)
+
+                band_schema['bands'] = STANDARD_MULTISPECTRAL_BANDS
+                band_schema['band_order'] = STANDARD_MULTISPECTRAL_BANDS
+                band_schema['band_count'] = 4
+                band_schema['schema'] = 'RGN'
+                band_schema['source_band_indices'] = {
+                    'R': 0,
+                    'G': 1,
+                    'B': None,
+                    'NIR': 2,
+                }
+                band_schema['missing_bands'] = ['B']
                 
                 # Normalize
                 if img.dtype == np.uint16:

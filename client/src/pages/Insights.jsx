@@ -9,6 +9,7 @@ import {
   CheckCircle,
   BarChart2,
 } from 'lucide-react';
+import FieldIntelligence from '../components/FieldIntelligence.jsx';
 
 export default function InsightsPage() {
   const [images, setImages] = useState([]);
@@ -281,6 +282,8 @@ export default function InsightsPage() {
                 </div>
               </>
             ) : null}
+
+            <FieldIntelligence />
           </>
         )}
       </div>
