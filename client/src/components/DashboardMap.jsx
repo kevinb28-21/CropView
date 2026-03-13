@@ -1,26 +1,24 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, Polygon, Tooltip, useMapEvents, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, Polygon, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ZoomControl, CompassControl, FullscreenControl } from './MapControls.jsx';
-import { MouseRotation } from './MouseRotation.jsx';
-import { MapMarkerUpdater } from './MapMarkerUpdater.jsx';
+import { ZoomControl, FullscreenControl } from './MapControls.jsx';
 
 const ACCENT_HEX = '#7d8c4a';
 
-const droneIcon = L.divIcon({
-  className: 'drone-marker-icon',
-  html: `<div class="drone-marker" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:${ACCENT_HEX};"><svg viewBox="0 0 32 32" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="16" cy="16" r="10"/><line x1="16" y1="6" x2="16" y2="26"/><line x1="6" y1="16" x2="26" y2="16"/></svg></div>`,
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-  popupAnchor: [0, -16],
-  tooltipAnchor: [0, -16],
-});
+function makeDroneIcon(heading = 0) {
+  return L.divIcon({
+    className: 'drone-marker-icon',
+    html: `<div class="drone-marker" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:${ACCENT_HEX};transform:rotate(${heading}deg);"><svg viewBox="0 0 32 32" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="16" cy="16" r="10"/><line x1="16" y1="6" x2="16" y2="26"/><line x1="6" y1="16" x2="26" y2="16"/></svg></div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
+    tooltipAnchor: [0, -16],
+  });
+}
 
-// Toronto coordinates
 const TORONTO_CENTER = [43.6532, -79.3832];
 
-// Drag rectangle component
 function DragRectangle({ drawMode, onDraftChange }) {
   const map = useMap();
   const startRef = useRef(null);
@@ -39,13 +37,12 @@ function DragRectangle({ drawMode, onDraftChange }) {
     }
 
     const handleMouseDown = (e) => {
-      if (!drawMode || e.originalEvent.button !== 0) return; // Only left mouse button
+      if (!drawMode || e.originalEvent.button !== 0) return;
       e.originalEvent.preventDefault();
       const latlng = e.latlng;
       startRef.current = latlng;
       setIsDrawing(true);
-      
-      // Create rectangle layer
+
       if (rectangleRef.current) {
         map.removeLayer(rectangleRef.current);
       }
@@ -60,10 +57,8 @@ function DragRectangle({ drawMode, onDraftChange }) {
 
     const handleMouseMove = (e) => {
       if (!drawMode || !isDrawing || !startRef.current) return;
-      const latlng = e.latlng;
-      
       if (rectangleRef.current) {
-        rectangleRef.current.setBounds([startRef.current, latlng]);
+        rectangleRef.current.setBounds([startRef.current, e.latlng]);
       }
     };
 
@@ -71,24 +66,23 @@ function DragRectangle({ drawMode, onDraftChange }) {
       if (!drawMode || !isDrawing || !startRef.current) return;
       const latlng = e.latlng;
       const start = startRef.current;
-      
-      // Create rectangular geofence
+
       const minLat = Math.min(start.lat, latlng.lat);
       const maxLat = Math.max(start.lat, latlng.lat);
       const minLng = Math.min(start.lng, latlng.lng);
       const maxLng = Math.max(start.lng, latlng.lng);
-      
+
       const corners = [
         { lat: minLat, lng: minLng },
         { lat: minLat, lng: maxLng },
         { lat: maxLat, lng: maxLng },
         { lat: maxLat, lng: minLng }
       ];
-      
+
       onDraftChange?.(corners);
       setIsDrawing(false);
       startRef.current = null;
-      
+
       if (rectangleRef.current) {
         map.removeLayer(rectangleRef.current);
         rectangleRef.current = null;
@@ -98,14 +92,13 @@ function DragRectangle({ drawMode, onDraftChange }) {
     map.on('mousedown', handleMouseDown);
     map.on('mousemove', handleMouseMove);
     map.on('mouseup', handleMouseUp);
-    
-    // Prevent map dragging when in draw mode
+
     if (drawMode) {
       map.dragging.disable();
     } else {
       map.dragging.enable();
     }
-    
+
     const mapContainer = map.getContainer();
     mapContainer.style.cursor = drawMode ? 'crosshair' : '';
 
@@ -113,7 +106,7 @@ function DragRectangle({ drawMode, onDraftChange }) {
       map.off('mousedown', handleMouseDown);
       map.off('mousemove', handleMouseMove);
       map.off('mouseup', handleMouseUp);
-      map.dragging.enable(); // Re-enable dragging when cleaning up
+      map.dragging.enable();
       mapContainer.style.cursor = '';
       if (rectangleRef.current) {
         map.removeLayer(rectangleRef.current);
@@ -125,27 +118,26 @@ function DragRectangle({ drawMode, onDraftChange }) {
 }
 
 
-export default function DashboardMap({ 
-  telemetry, 
-  drawMode = false, 
-  draftGeofence = [], 
+export default function DashboardMap({
+  telemetry,
+  drawMode = false,
+  draftGeofence = [],
   onDraftChange,
-  rotation = 0,
-  onRotationChange 
 }) {
   const center = useMemo(() => {
-    // Use telemetry position if available, otherwise use a default center
-    // Note: TORONTO_CENTER is just a fallback - in production, use actual field location
     return telemetry?.position ? [telemetry.position.lat, telemetry.position.lng] : TORONTO_CENTER;
   }, [telemetry]);
+
+  const heading = telemetry?.position?.heading ?? 0;
+  const droneIcon = useMemo(() => makeDroneIcon(heading), [heading]);
 
   const routeLatLngs = (telemetry?.route || []).map(p => [p.lat, p.lng]);
   const geofenceLatLngs = (telemetry?.geofence || []).map(p => [p.lat, p.lng]);
 
   return (
-    <MapContainer 
-      center={center} 
-      zoom={15} 
+    <MapContainer
+      center={center}
+      zoom={15}
       style={{ height: '100%', width: '100%', position: 'relative' }}
       scrollWheelZoom={true}
       zoomControl={false}
@@ -166,17 +158,14 @@ export default function DashboardMap({
         zoomOffset={0}
         noWrap={false}
       />
-      
+
       <DragRectangle drawMode={drawMode} onDraftChange={onDraftChange} />
-      <MouseRotation rotation={rotation} onRotationChange={onRotationChange} />
-      <MapMarkerUpdater rotation={rotation} />
       <ZoomControl />
-      <CompassControl rotation={rotation} onRotationChange={onRotationChange} />
       <FullscreenControl />
 
       {telemetry?.position && (
-        <Marker 
-          position={[telemetry.position.lat, telemetry.position.lng]} 
+        <Marker
+          position={[telemetry.position.lat, telemetry.position.lng]}
           icon={droneIcon}
           key={`drone-${telemetry.position.lat}-${telemetry.position.lng}`}
         >

@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import DashboardMap from '../components/DashboardMap.jsx';
 import { api } from '../utils/api.js';
-import { Pencil, Check, RotateCcw, Save, Lightbulb, Navigation, MapPin, Layers, Battery, Activity } from 'lucide-react';
+import { Pencil, Check, RotateCcw, Save, MapPin, Shield } from 'lucide-react';
+
+const formatCoord = (val) => val != null ? val.toFixed(6) : '--';
 
 export default function MapPage() {
   const [telemetry, setTelemetry] = useState({ position: null, route: [], geofence: [] });
   const [drawMode, setDrawMode] = useState(false);
   const [draftGeofence, setDraftGeofence] = useState([]);
-  const [rotation, setRotation] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -51,6 +52,53 @@ export default function MapPage() {
   }, []);
 
   const pos = telemetry.position;
+  const geofencePoints = telemetry.geofence || [];
+
+  const geofenceBounds = (() => {
+    if (!geofencePoints.length) return null;
+    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+    geofencePoints.forEach(p => {
+      if (p.lat < minLat) minLat = p.lat;
+      if (p.lat > maxLat) maxLat = p.lat;
+      if (p.lng < minLng) minLng = p.lng;
+      if (p.lng > maxLng) maxLng = p.lng;
+    });
+    return { nwLat: maxLat, nwLng: minLng, seLat: minLat, seLng: maxLng };
+  })();
+
+  const sectionHeaderStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-2)',
+    paddingBottom: 'var(--space-2)',
+    marginBottom: 'var(--space-3)',
+    borderBottom: '1px solid var(--bg-border)',
+    fontSize: '11px',
+    fontFamily: 'var(--font-mono)',
+    fontWeight: 600,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color: 'var(--accent)',
+  };
+
+  const dataRowStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '3px 0',
+  };
+
+  const labelStyle = {
+    fontSize: '11px',
+    fontFamily: 'var(--font-mono)',
+    color: 'var(--text-muted)',
+  };
+
+  const valueStyle = {
+    fontSize: '12px',
+    fontFamily: 'var(--font-mono)',
+    color: 'var(--text-primary)',
+  };
 
   return (
     <div className="map-page">
@@ -139,24 +187,6 @@ export default function MapPage() {
               <span><strong>Drawing mode:</strong> Click and drag on the map to draw a rectangular geofence</span>
             </div>
           )}
-
-          <div
-            style={{
-              padding: 'var(--space-3)',
-              marginTop: 'var(--space-4)',
-              fontSize: 'var(--font-size-xs)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-2)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--bg-border)',
-              background: 'var(--bg-surface-elevated)',
-              color: 'var(--text-muted)',
-            }}
-          >
-            <Lightbulb size={16} aria-hidden />
-            <span><strong>Tip:</strong> Right-click and drag (or Ctrl/Cmd + left-click drag) to rotate the map</span>
-          </div>
         </div>
 
         <div className="map-page-map">
@@ -165,57 +195,91 @@ export default function MapPage() {
             drawMode={drawMode}
             draftGeofence={draftGeofence}
             onDraftChange={setDraftGeofence}
-            rotation={rotation}
-            onRotationChange={setRotation}
           />
         </div>
       </div>
 
       <aside className="map-page-sidebar">
         <h3 className="map-page-sidebar-title">Live Telemetry</h3>
-        <div className="map-page-telemetry-list">
-          <div className="map-page-telemetry-row">
-            <MapPin size={18} strokeWidth={2} className="map-page-telemetry-icon" aria-hidden />
-            <div className="map-page-telemetry-label">Latitude</div>
-            <div className="map-page-telemetry-value">
-              {pos?.lat != null ? pos.lat.toFixed(6) : '--'}
-            </div>
+
+        {/* Drone Position */}
+        <div style={{ marginBottom: 'var(--space-5)' }}>
+          <div style={sectionHeaderStyle}>
+            <MapPin size={14} aria-hidden />
+            DRONE POSITION
           </div>
-          <div className="map-page-telemetry-row">
-            <MapPin size={18} strokeWidth={2} className="map-page-telemetry-icon" aria-hidden />
-            <div className="map-page-telemetry-label">Longitude</div>
-            <div className="map-page-telemetry-value">
-              {pos?.lng != null ? pos.lng.toFixed(6) : '--'}
-            </div>
+          <div style={dataRowStyle}>
+            <span style={labelStyle}>LAT</span>
+            <span style={valueStyle}>{formatCoord(pos?.lat)}</span>
           </div>
-          <div className="map-page-telemetry-row">
-            <Layers size={18} strokeWidth={2} className="map-page-telemetry-icon" aria-hidden />
-            <div className="map-page-telemetry-label">Altitude</div>
-            <div className="map-page-telemetry-value">
-              {pos?.altitude != null ? `${pos.altitude.toFixed(1)} m` : '--'}
-            </div>
+          <div style={dataRowStyle}>
+            <span style={labelStyle}>LNG</span>
+            <span style={valueStyle}>{formatCoord(pos?.lng)}</span>
           </div>
-          <div className="map-page-telemetry-row">
-            <Navigation size={18} strokeWidth={2} className="map-page-telemetry-icon" aria-hidden />
-            <div className="map-page-telemetry-label">Heading</div>
-            <div className="map-page-telemetry-value">
-              {pos?.heading != null ? `${pos.heading}°` : '--'}
-            </div>
+          <div style={dataRowStyle}>
+            <span style={labelStyle}>ALT</span>
+            <span style={valueStyle}>{pos?.altitude != null ? `${pos.altitude.toFixed(1)} m` : '--'}</span>
           </div>
-          <div className="map-page-telemetry-row">
-            <Battery size={18} strokeWidth={2} className="map-page-telemetry-icon" aria-hidden />
-            <div className="map-page-telemetry-label">Battery</div>
-            <div className="map-page-telemetry-value">
-              {pos?.battery_level != null ? `${pos.battery_level}%` : '--'}
-            </div>
+          <div style={dataRowStyle}>
+            <span style={labelStyle}>HDG</span>
+            <span style={valueStyle}>{pos?.heading != null ? `${pos.heading}°` : '--'}</span>
           </div>
-          <div className="map-page-telemetry-row">
-            <Activity size={18} strokeWidth={2} className="map-page-telemetry-icon" aria-hidden />
-            <div className="map-page-telemetry-label">Status</div>
-            <div className="map-page-telemetry-value">
+          <div style={dataRowStyle}>
+            <span style={labelStyle}>BATT</span>
+            <span style={valueStyle}>{pos?.battery_level != null ? `${pos.battery_level}%` : '--'}</span>
+          </div>
+          <div style={dataRowStyle}>
+            <span style={labelStyle}>STATUS</span>
+            <span style={valueStyle}>
               {pos?.status != null && String(pos.status).trim() !== '' ? String(pos.status) : '--'}
-            </div>
+            </span>
           </div>
+        </div>
+
+        {/* Geofence */}
+        <div>
+          <div style={sectionHeaderStyle}>
+            <Shield size={14} aria-hidden />
+            GEOFENCE
+          </div>
+          {geofencePoints.length > 0 ? (
+            <>
+              <div style={dataRowStyle}>
+                <span style={labelStyle}>POINTS</span>
+                <span style={valueStyle}>{geofencePoints.length}</span>
+              </div>
+              {geofenceBounds && (
+                <>
+                  <div style={{ ...dataRowStyle, marginTop: '4px' }}>
+                    <span style={labelStyle}>NW</span>
+                    <span style={valueStyle}>
+                      {formatCoord(geofenceBounds.nwLat)}, {formatCoord(geofenceBounds.nwLng)}
+                    </span>
+                  </div>
+                  <div style={dataRowStyle}>
+                    <span style={labelStyle}>SE</span>
+                    <span style={valueStyle}>
+                      {formatCoord(geofenceBounds.seLat)}, {formatCoord(geofenceBounds.seLng)}
+                    </span>
+                  </div>
+                </>
+              )}
+              <div style={{ ...dataRowStyle, marginTop: '4px' }}>
+                <span style={labelStyle}>STATUS</span>
+                <span style={{
+                  ...valueStyle,
+                  color: telemetry.is_active !== false ? 'var(--status-healthy)' : 'var(--status-poor)',
+                  fontWeight: 600,
+                }}>
+                  {telemetry.is_active !== false ? 'ACTIVE' : 'INACTIVE'}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', padding: '4px 0' }}>
+              No geofence defined
+            </div>
+          )}
         </div>
       </aside>
     </div>
