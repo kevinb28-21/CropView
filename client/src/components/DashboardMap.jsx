@@ -8,12 +8,19 @@ const ACCENT_HEX = '#7d8c4a';
 
 function makeDroneIcon(heading = 0) {
   return L.divIcon({
-    className: 'drone-marker-icon',
-    html: `<div class="drone-marker" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:${ACCENT_HEX};transform:rotate(${heading}deg);"><svg viewBox="0 0 32 32" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="16" cy="16" r="10"/><line x1="16" y1="6" x2="16" y2="26"/><line x1="6" y1="16" x2="26" y2="16"/></svg></div>`,
+    className: '',
+    html: `<div style="
+      width: 32px;
+      height: 32px;
+      transform: rotate(${heading}deg);
+      transition: transform 0.4s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: ${ACCENT_HEX};
+    "><svg viewBox="0 0 32 32" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="16" cy="16" r="10"/><line x1="16" y1="6" x2="16" y2="26"/><line x1="6" y1="16" x2="26" y2="16"/></svg></div>`,
     iconSize: [32, 32],
     iconAnchor: [16, 16],
-    popupAnchor: [0, -16],
-    tooltipAnchor: [0, -16],
   });
 }
 
@@ -118,6 +125,29 @@ function DragRectangle({ drawMode, onDraftChange }) {
 }
 
 
+function DroneMarker({ position, heading }) {
+  const markerRef = useRef(null);
+  const icon = useMemo(() => makeDroneIcon(heading), [heading]);
+
+  useEffect(() => {
+    if (markerRef.current) {
+      markerRef.current.setIcon(icon);
+    }
+  }, [icon]);
+
+  return (
+    <Marker
+      ref={markerRef}
+      position={[position.lat, position.lng]}
+      icon={icon}
+    >
+      <Tooltip direction="top" offset={[0, -10]} opacity={1} permanent>
+        Drone
+      </Tooltip>
+    </Marker>
+  );
+}
+
 export default function DashboardMap({
   telemetry,
   drawMode = false,
@@ -128,8 +158,7 @@ export default function DashboardMap({
     return telemetry?.position ? [telemetry.position.lat, telemetry.position.lng] : TORONTO_CENTER;
   }, [telemetry]);
 
-  const heading = telemetry?.position?.heading ?? 0;
-  const droneIcon = useMemo(() => makeDroneIcon(heading), [heading]);
+  const heading = telemetry?.heading ?? telemetry?.position?.heading ?? 0;
 
   const routeLatLngs = (telemetry?.route || []).map(p => [p.lat, p.lng]);
   const geofenceLatLngs = (telemetry?.geofence || []).map(p => [p.lat, p.lng]);
@@ -164,15 +193,7 @@ export default function DashboardMap({
       <FullscreenControl />
 
       {telemetry?.position && (
-        <Marker
-          position={[telemetry.position.lat, telemetry.position.lng]}
-          icon={droneIcon}
-          key={`drone-${telemetry.position.lat}-${telemetry.position.lng}`}
-        >
-          <Tooltip direction="top" offset={[0, -10]} opacity={1} permanent>
-            Drone
-          </Tooltip>
-        </Marker>
+        <DroneMarker position={telemetry.position} heading={heading} />
       )}
 
       {routeLatLngs.length > 1 && (

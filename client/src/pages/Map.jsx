@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import DashboardMap from '../components/DashboardMap.jsx';
 import { api } from '../utils/api.js';
 import { Pencil, Check, RotateCcw, Save, MapPin, Shield } from 'lucide-react';
@@ -21,7 +21,7 @@ export default function MapPage() {
       try {
         const tel = await api.get('/api/telemetry').catch(() => null);
         const telemetryData = tel || { position: null, route: [], geofence: [] };
-        if (mounted) setTelemetry(telemetryData);
+        if (mounted) setTelemetry({ ...telemetryData });
       } catch (e) {
         console.error('Error fetching telemetry:', e);
       } finally {
@@ -52,19 +52,21 @@ export default function MapPage() {
   }, []);
 
   const pos = telemetry.position;
-  const geofencePoints = telemetry.geofence || [];
 
-  const geofenceBounds = (() => {
-    if (!geofencePoints.length) return null;
-    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
-    geofencePoints.forEach(p => {
-      if (p.lat < minLat) minLat = p.lat;
-      if (p.lat > maxLat) maxLat = p.lat;
-      if (p.lng < minLng) minLng = p.lng;
-      if (p.lng > maxLng) maxLng = p.lng;
-    });
-    return { nwLat: maxLat, nwLng: minLng, seLat: minLat, seLng: maxLng };
-  })();
+  const geofenceBounds = useMemo(() => {
+    const points = telemetry?.geofence ?? telemetry?.geofencePoints ?? telemetry?.geofence_points ?? [];
+    if (!points || points.length === 0) return null;
+
+    const lats = points.map(p => p.lat ?? p.latitude);
+    const lngs = points.map(p => p.lng ?? p.longitude ?? p.lon);
+
+    return {
+      count: points.length,
+      nw: { lat: Math.max(...lats), lng: Math.min(...lngs) },
+      se: { lat: Math.min(...lats), lng: Math.max(...lngs) },
+      active: telemetry?.geofenceActive ?? telemetry?.is_active ?? true,
+    };
+  }, [telemetry]);
 
   const sectionHeaderStyle = {
     display: 'flex',
@@ -242,43 +244,37 @@ export default function MapPage() {
             <Shield size={14} aria-hidden />
             GEOFENCE
           </div>
-          {geofencePoints.length > 0 ? (
+          {geofenceBounds ? (
             <>
               <div style={dataRowStyle}>
                 <span style={labelStyle}>POINTS</span>
-                <span style={valueStyle}>{geofencePoints.length}</span>
+                <span style={valueStyle}>{geofenceBounds.count}</span>
               </div>
-              {geofenceBounds && (
-                <>
-                  <div style={{ ...dataRowStyle, marginTop: '4px' }}>
-                    <span style={labelStyle}>NW</span>
-                    <span style={valueStyle}>
-                      {formatCoord(geofenceBounds.nwLat)}, {formatCoord(geofenceBounds.nwLng)}
-                    </span>
-                  </div>
-                  <div style={dataRowStyle}>
-                    <span style={labelStyle}>SE</span>
-                    <span style={valueStyle}>
-                      {formatCoord(geofenceBounds.seLat)}, {formatCoord(geofenceBounds.seLng)}
-                    </span>
-                  </div>
-                </>
-              )}
+              <div style={{ ...dataRowStyle, marginTop: '4px' }}>
+                <span style={labelStyle}>NW</span>
+                <span style={valueStyle}>
+                  {formatCoord(geofenceBounds.nw.lat)}, {formatCoord(geofenceBounds.nw.lng)}
+                </span>
+              </div>
+              <div style={dataRowStyle}>
+                <span style={labelStyle}>SE</span>
+                <span style={valueStyle}>
+                  {formatCoord(geofenceBounds.se.lat)}, {formatCoord(geofenceBounds.se.lng)}
+                </span>
+              </div>
               <div style={{ ...dataRowStyle, marginTop: '4px' }}>
                 <span style={labelStyle}>STATUS</span>
                 <span style={{
                   ...valueStyle,
-                  color: telemetry.is_active !== false ? 'var(--status-healthy)' : 'var(--status-poor)',
+                  color: geofenceBounds.active ? 'var(--status-healthy)' : 'var(--status-poor)',
                   fontWeight: 600,
                 }}>
-                  {telemetry.is_active !== false ? 'ACTIVE' : 'INACTIVE'}
+                  {geofenceBounds.active ? 'ACTIVE' : 'INACTIVE'}
                 </span>
               </div>
             </>
           ) : (
-            <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', padding: '4px 0' }}>
-              No geofence defined
-            </div>
+            <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>No geofence defined</span>
           )}
         </div>
       </aside>
