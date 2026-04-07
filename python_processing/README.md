@@ -2,7 +2,7 @@
 
 This directory contains the Python-based image processing pipeline for onion crop health monitoring.
 
-> 📚 **For complete documentation, see [documentation/ml/README.md](../documentation/ml/README.md)**
+> 📚 **For complete documentation, see [Documentation/ml/README.md](../Documentation/ml/README.md)**
 
 ## Components
 
@@ -14,7 +14,6 @@ This directory contains the Python-based image processing pipeline for onion cro
 - `batch_test_ndvi.py`: Batch testing script for vegetation indices
 - `train_model.py`: ML model training script
 - `requirements.txt`: Python dependencies
-- `upload_images.py`: Mission upload helper (supports Node `/api/images` and Flask `/api/upload`)
 - `mapir_survey3w_pwm.py`: MAPIR Survey3(W) PWM trigger controller (Pi-only)
 - `capture_mapir_survey3w_interval.py`: MAPIR interval trigger + optional MAVLink GPS logging (Pi-only)
 - `sync_mapir_sdcard.py`: Copy images from mounted SD (DCIM) into mission folder
@@ -35,12 +34,12 @@ cp .env.example .env
 
 3. Run the Flask server:
 ```bash
-python flask_api.py
+python3 flask_api_db.py
 ```
 
 Or with gunicorn for production:
 ```bash
-gunicorn -w 4 -b 0.0.0.0:5001 flask_api:app
+gunicorn -w 4 -b 0.0.0.0:5001 flask_api_db:app
 ```
 
 ## Testing Image Processing

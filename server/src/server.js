@@ -184,7 +184,6 @@ app.post('/api/images', uploadImage, async (req, res) => {
             gpsData.speed = gpsData.ground_speed;
           }
         }
-        console.log('GPS metadata received:', gpsData);
       } catch (e) {
         console.warn('Failed to parse GPS data:', e);
       }
@@ -205,8 +204,6 @@ app.post('/api/images', uploadImage, async (req, res) => {
       mimeType: req.file.mimetype,
       gps: gpsData
     });
-    
-    console.log(`✓ Image ${imageId} saved to database (status: uploaded)`);
     
     // Trigger immediate processing via Flask (fire-and-forget; do not block response)
     const flaskProcessUrl = process.env.FLASK_PROCESS_URL || 'http://localhost:5001/api/process';
@@ -385,9 +382,7 @@ app.post('/api/images/:id/process', async (req, res) => {
       'UPDATE images SET processing_status = $1, processed_at = NOW() WHERE id = $2',
       ['completed', id]
     );
-    
-    console.log(`✓ Image ${id} processed with demo analysis`);
-    
+
     // Return the updated image
     const fullImage = await getImageById(id);
     res.json(fullImage);
@@ -477,14 +472,6 @@ app.get('/api/ml/status', async (req, res) => {
     const pythonProcessingDir = path.resolve(projectRoot, 'python_processing');
     const modelsBaseDir = path.resolve(pythonProcessingDir, 'models');
     
-    // Debug logging
-    console.log('[ML STATUS] __dirname:', __dirname);
-    console.log('[ML STATUS] projectRoot:', projectRoot);
-    console.log('[ML STATUS] modelsBaseDir:', modelsBaseDir);
-    
-    console.log('[ML STATUS] Checking models in:', modelsBaseDir);
-    console.log('[ML STATUS] Python processing dir:', pythonProcessingDir);
-    
     // Check environment variables (from worker's perspective)
     const useMultiCrop = process.env.USE_MULTI_CROP_MODEL || 'true';
     const multiCropModelPath = process.env.MULTI_CROP_MODEL_PATH;
@@ -504,13 +491,11 @@ app.get('/api/ml/status', async (req, res) => {
       // If path not specified, try to find latest model in directory
       if (!multiCropPath || !fs.existsSync(multiCropPath)) {
         const resolvedMultiCropDir = path.resolve(multiCropModelDir);
-        console.log('[ML STATUS] Checking multi-crop directory:', resolvedMultiCropDir);
         
         if (fs.existsSync(resolvedMultiCropDir)) {
           try {
             const files = fs.readdirSync(resolvedMultiCropDir);
             const modelFiles = files.filter(f => f.endsWith('_final.h5'));
-            console.log('[ML STATUS] Found model files:', modelFiles);
             
             if (modelFiles.length > 0) {
               // Get most recently modified
@@ -520,7 +505,6 @@ app.get('/api/ml/status', async (req, res) => {
                 const currentTime = fs.statSync(current).mtime;
                 return currentTime > latestTime ? current : latest;
               });
-              console.log('[ML STATUS] Selected model:', multiCropPath);
             }
           } catch (e) {
             console.warn('[ML STATUS] Error reading multi-crop model directory:', e.message);
@@ -549,21 +533,18 @@ app.get('/api/ml/status', async (req, res) => {
         } catch (e) {
           modelVersion = path.basename(multiCropPath).replace('_final.h5', '');
         }
-        console.log('[ML STATUS] Multi-crop model detected:', modelPath, 'version:', modelVersion);
       }
     }
     
     // Fallback to single-crop model
     if (!modelAvailable) {
       const resolvedSingleCropPath = path.resolve(singleCropModelPath);
-      console.log('[ML STATUS] Checking single-crop model:', resolvedSingleCropPath);
       
       if (fs.existsSync(resolvedSingleCropPath)) {
         modelAvailable = true;
         modelType = 'single_crop';
         modelPath = resolvedSingleCropPath;
         modelVersion = path.basename(singleCropModelPath);
-        console.log('[ML STATUS] Single-crop model detected:', modelPath);
       } else {
         console.warn('[ML STATUS] Single-crop model not found:', resolvedSingleCropPath);
       }
@@ -572,7 +553,6 @@ app.get('/api/ml/status', async (req, res) => {
     // If no model found, provide fake but realistic data for demo as requested
     let isDemo = false;
     if (!modelAvailable) {
-      console.log('[ML STATUS] No real model found, providing production-grade demo data');
       modelAvailable = true; 
       modelType = 'multi_crop';
       modelPath = path.join(modelsBaseDir, 'multi_crop', 'production_v1_final.h5');
@@ -597,7 +577,6 @@ app.get('/api/ml/status', async (req, res) => {
       }
     };
     
-    console.log('[ML STATUS] Response:', JSON.stringify(response, null, 2));
     res.json(response);
   } catch (error) {
     console.error('[ML STATUS] Error checking model status:', error);

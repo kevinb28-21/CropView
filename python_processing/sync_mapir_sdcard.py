@@ -6,7 +6,7 @@ This script is designed for the common MAPIR workflow:
 1) Trigger captures via PWM during flight (camera writes to SD)
 2) After flight, mount SD over USB (MAPIR PWM mount toggle) or remove SD and mount normally
 3) Copy images from the camera/DCIM folder into /home/pi/drone_images (or another output dir)
-4) Then upload with `upload_images.py`
+4) Then upload images via the web client or `POST /api/images` on the Node server
 
 The script:
 - Finds a likely mountpoint under /media/pi that contains a DCIM folder

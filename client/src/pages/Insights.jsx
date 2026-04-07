@@ -9,12 +9,17 @@ import {
   CheckCircle,
   BarChart2,
 } from 'lucide-react';
-import FieldIntelligence from '../components/FieldIntelligence.jsx';
+import FieldIntelligence, { MISSION_DATASETS } from '../components/FieldIntelligence.jsx';
+
+const FIELD_MISSION_OPTIONS = Object.keys(MISSION_DATASETS)
+  .sort()
+  .map((id) => ({ value: id, label: id }));
 
 export default function InsightsPage() {
-  const [images, setImages] = useState([]);
-  const [missionOptions, setMissionOptions] = useState([{ value: 'default', label: 'Default (no mission)' }]);
-  const [selectedMission, setSelectedMission] = useState('default');
+  const [, setImages] = useState([]);
+  const [selectedMission, setSelectedMission] = useState(
+    () => FIELD_MISSION_OPTIONS[FIELD_MISSION_OPTIONS.length - 1]?.value || ''
+  );
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingInsights, setLoadingInsights] = useState(false);
@@ -27,17 +32,9 @@ export default function InsightsPage() {
       .then((data) => {
         const list = Array.isArray(data) ? data : (data?.images || data?.data || []);
         if (mounted) setImages(list);
-        const ids = new Set();
-        (list || []).forEach((img) => {
-          const id = img.missionId || img.mission_id;
-          if (id) ids.add(id);
-        });
-        const options = [{ value: 'default', label: 'Default (no mission)' }];
-        ids.forEach((id) => options.push({ value: id, label: id }));
-        if (mounted) setMissionOptions(options);
       })
       .catch(() => {
-        if (mounted) setMissionOptions([{ value: 'default', label: 'Default (no mission)' }]);
+        if (mounted) setImages([]);
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -46,7 +43,7 @@ export default function InsightsPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedMission) return;
+    if (!selectedMission || selectedMission === '') return;
     let mounted = true;
     setLoadingInsights(true);
     api
@@ -164,7 +161,7 @@ export default function InsightsPage() {
               className="input"
               style={{ maxWidth: 360, marginBottom: 'var(--space-6)' }}
             >
-              {missionOptions.map((opt) => (
+              {FIELD_MISSION_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -177,7 +174,7 @@ export default function InsightsPage() {
                 <div style={{ height: 220, background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-4)' }} />
                 <div style={{ height: 80, background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-md)' }} />
               </div>
-            ) : insights?.image_count === 0 ? (
+            ) : !selectedMission || Object.keys(MISSION_DATASETS).length === 0 ? (
               <div className="empty-state">
                 <div className="empty-state-icon">
                   <Lightbulb size={48} strokeWidth={1} aria-hidden />
@@ -281,9 +278,13 @@ export default function InsightsPage() {
                   )}
                 </div>
               </>
-            ) : null}
+            ) : (
+              <div style={{ padding: 'var(--space-4)', color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-4)' }}>
+                No API insight payload for this mission (backend may have no processed images for this ID).
+              </div>
+            )}
 
-            <FieldIntelligence />
+            <FieldIntelligence selectedMissionId={selectedMission} />
           </>
         )}
       </div>
