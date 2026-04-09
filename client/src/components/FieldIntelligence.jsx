@@ -1165,7 +1165,7 @@ function resolveIcon(icon) {
 }
 
 export default function FieldIntelligence() {
-  const missionIds = getFieldMissionIdsChronological(); // oldest → newest
+  const missionIds = getFieldMissionIdsChronological().slice().reverse(); // newest → oldest (timeline top → bottom)
 
   if (missionIds.length === 0) {
     return (
