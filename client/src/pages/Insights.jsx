@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { api } from '../utils/api.js';
 import {
-  Lightbulb,
   TrendingUp,
   TrendingDown,
   Minus,
@@ -11,15 +10,27 @@ import {
 } from 'lucide-react';
 import FieldIntelligence, { MISSION_DATASETS } from '../components/FieldIntelligence.jsx';
 
-const FIELD_MISSION_OPTIONS = Object.keys(MISSION_DATASETS)
-  .sort()
-  .map((id) => ({ value: id, label: id }));
+const MISSION_IDS = Object.keys(MISSION_DATASETS).sort();
+const LATEST_MISSION_ID = MISSION_IDS[MISSION_IDS.length - 1] || '';
+
+function computeAverage(nums) {
+  if (!nums.length) return 0;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
+function computeTrendLabelFromHealth(missionsSorted) {
+  if (missionsSorted.length < 6) return 'Stable';
+  const first3 = missionsSorted.slice(0, 3).map((m) => m.healthScore);
+  const last3 = missionsSorted.slice(-3).map((m) => m.healthScore);
+  const a = computeAverage(first3);
+  const b = computeAverage(last3);
+  if (b > a) return 'Improving';
+  if (b < a) return 'Declining';
+  return 'Stable';
+}
 
 export default function InsightsPage() {
   const [, setImages] = useState([]);
-  const [selectedMission, setSelectedMission] = useState(
-    () => FIELD_MISSION_OPTIONS[FIELD_MISSION_OPTIONS.length - 1]?.value || ''
-  );
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingInsights, setLoadingInsights] = useState(false);
@@ -43,11 +54,12 @@ export default function InsightsPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedMission || selectedMission === '') return;
+    // Keep the API call intact (latest mission) without gating page rendering behind a selector.
+    if (!LATEST_MISSION_ID) return;
     let mounted = true;
     setLoadingInsights(true);
     api
-      .get(`/api/insights/${encodeURIComponent(selectedMission)}`)
+      .get(`/api/insights/${encodeURIComponent(LATEST_MISSION_ID)}`)
       .then((data) => {
         if (mounted) setInsights(data);
       })
@@ -58,7 +70,7 @@ export default function InsightsPage() {
         if (mounted) setLoadingInsights(false);
       });
     return () => { mounted = false; };
-  }, [selectedMission]);
+  }, []);
 
   // Canvas timeline chart
   useEffect(() => {
@@ -132,7 +144,39 @@ export default function InsightsPage() {
     });
   }, [insights]);
 
-  const TrendIcon = insights?.ndvi_trend === 'improving' ? TrendingUp : insights?.ndvi_trend === 'declining' ? TrendingDown : Minus;
+  const missionsSorted = MISSION_IDS.map((id) => MISSION_DATASETS[id]).filter(Boolean);
+  const totalMissions = missionsSorted.length;
+  const totalImagesProcessed = totalMissions * 5;
+  const avgHealthScore = computeAverage(missionsSorted.map((m) => m.healthScore));
+  const overallTrendLabel = computeTrendLabelFromHealth(missionsSorted);
+  const dateRange = totalMissions > 0 ? `${missionsSorted[0].missionId} → ${missionsSorted[missionsSorted.length - 1].missionId}` : '—';
+
+  const actionRequiredMissions = missionsSorted.filter((m) => (m.insights || []).some((c) => c.severity === 'ACTION REQUIRED')).length;
+  const actionRequiredPct = totalMissions ? actionRequiredMissions / totalMissions : 0;
+  const anyWeedHeadline = missionsSorted.some((m) => (m.insights || []).some((c) => (c.headline || '').toLowerCase().includes('weed')));
+
+  const recent3 = missionsSorted.slice(-3).map((m) => m.healthScore);
+  const recent3Increasing = recent3.length === 3 && recent3[2] > recent3[1] && recent3[1] > recent3[0];
+
+  const nowMonth = new Date().getMonth() + 1; // 1-12
+  const monthRec =
+    nowMonth >= 1 && nowMonth <= 3
+      ? 'Early-season monitoring window is open. Establish baseline index values for comparison against mid-season data.'
+      : nowMonth >= 4 && nowMonth <= 5
+        ? 'Spring emergence period. Increase flight frequency to weekly to catch early stress events before canopy closes.'
+        : nowMonth >= 6 && nowMonth <= 8
+          ? 'Peak growing season. Prioritize NDVI and GNDVI monitoring over SAVI as canopy coverage increases.'
+          : 'Late-season monitoring. Focus on stress detection and harvest readiness indicators.';
+
+  const synthesizedRecs = [];
+  if (actionRequiredPct > 0.4) synthesizedRecs.push('Multiple high-stress events detected across the season. Review irrigation and soil drainage history before next planting cycle.');
+  if (avgHealthScore > 60) synthesizedRecs.push('Overall seasonal health is above baseline. Current management practices are producing consistent results.');
+  if (avgHealthScore < 40) synthesizedRecs.push('Seasonal average health is critically low. Full agronomic review recommended before next season.');
+  if (recent3Increasing) synthesizedRecs.push('Field is trending toward recovery. Continue current practices and monitor weekly.');
+  if (anyWeedHeadline) synthesizedRecs.push('Weed pressure was detected during at least one mission this season. Evaluate pre-emergent treatment options.');
+  synthesizedRecs.push(monthRec);
+
+  const TrendIcon = overallTrendLabel === 'Improving' ? TrendingUp : overallTrendLabel === 'Declining' ? TrendingDown : Minus;
 
   return (
     <div className="container animate-fade-in">
@@ -152,139 +196,113 @@ export default function InsightsPage() {
           </div>
         ) : (
           <>
-            <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)', color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>
-              Mission
-            </label>
-            <select
-              value={selectedMission}
-              onChange={(e) => setSelectedMission(e.target.value)}
-              className="input"
-              style={{ maxWidth: 360, marginBottom: 'var(--space-6)' }}
+            {/* Summary stats across all missions */}
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: 'var(--space-6)',
+                padding: 'var(--space-5)',
+                background: 'var(--bg-surface-elevated)',
+                border: '1px solid var(--bg-border)',
+                borderRadius: 'var(--radius-lg)',
+                marginBottom: 'var(--space-6)',
+              }}
             >
-              {FIELD_MISSION_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              <div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginBottom: 'var(--space-1)' }}>Total missions</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-xl)', color: 'var(--text-primary)' }}>{totalMissions}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginBottom: 'var(--space-1)' }}>Total images processed</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-xl)', color: 'var(--text-primary)' }}>{totalImagesProcessed}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginBottom: 'var(--space-1)' }}>Average health score</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-2xl)', color: 'var(--accent)' }}>
+                  {Number.isFinite(avgHealthScore) ? avgHealthScore.toFixed(1) : '—'}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <TrendIcon size={20} strokeWidth={2} style={{ color: 'var(--text-secondary)' }} aria-hidden />
+                <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>Overall trend: {overallTrendLabel}</span>
+              </div>
+              <div style={{ marginLeft: 'auto' }}>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginBottom: 'var(--space-1)' }}>Date range</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>{dateRange}</div>
+              </div>
+            </div>
 
-            {loadingInsights ? (
-              <div className="insights-skeleton">
-                <div style={{ height: 100, background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-4)' }} />
-                <div style={{ height: 220, background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-4)' }} />
-                <div style={{ height: 80, background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-md)' }} />
-              </div>
-            ) : !selectedMission || Object.keys(MISSION_DATASETS).length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">
-                  <Lightbulb size={48} strokeWidth={1} aria-hidden />
-                </div>
-                <div className="empty-state-title">No field data yet</div>
-                <div className="empty-state-description">
-                  Upload and process images to generate insights for this mission.
-                </div>
-              </div>
-            ) : insights ? (
-              <>
+            {/* Optional API chart (latest mission payload) */}
+            {insights?.profile_records?.length > 0 && (
+              <div style={{ marginBottom: 'var(--space-6)' }}>
+                <h3 className="section-title" style={{ marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <BarChart2 size={20} strokeWidth={2} aria-hidden />
+                  Health score over time
+                </h3>
                 <div
                   style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    alignItems: 'center',
-                    gap: 'var(--space-6)',
-                    padding: 'var(--space-5)',
                     background: 'var(--bg-surface-elevated)',
                     border: '1px solid var(--bg-border)',
                     borderRadius: 'var(--radius-lg)',
-                    marginBottom: 'var(--space-6)',
+                    padding: 'var(--space-4)',
+                    height: 240,
                   }}
                 >
-                  <div>
-                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginBottom: 'var(--space-1)' }}>Images</div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-xl)', color: 'var(--text-primary)' }}>{insights.image_count}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', marginBottom: 'var(--space-1)' }}>Avg health score</div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--font-size-2xl)', color: 'var(--accent)' }}>
-                      {insights.avg_health_score != null ? insights.avg_health_score.toFixed(1) : '—'}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                    <TrendIcon size={20} strokeWidth={2} style={{ color: 'var(--text-secondary)' }} aria-hidden />
-                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>NDVI {insights.ndvi_trend}</span>
-                  </div>
-                  {insights.dominant_status && (
-                    <span className="badge badge-info" style={{ textTransform: 'capitalize' }}>{insights.dominant_status.replace('_', ' ')}</span>
-                  )}
+                  <canvas
+                    ref={chartRef}
+                    style={{ width: '100%', height: '100%', display: 'block' }}
+                    aria-label="Health score timeline chart"
+                  />
                 </div>
-
-                {insights.profile_records?.length > 0 && (
-                  <div style={{ marginBottom: 'var(--space-6)' }}>
-                    <h3 className="section-title" style={{ marginBottom: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                      <BarChart2 size={20} strokeWidth={2} aria-hidden />
-                      Health score over time
-                    </h3>
-                    <div
-                      style={{
-                        background: 'var(--bg-surface-elevated)',
-                        border: '1px solid var(--bg-border)',
-                        borderRadius: 'var(--radius-lg)',
-                        padding: 'var(--space-4)',
-                        height: 240,
-                      }}
-                    >
-                      <canvas
-                        ref={chartRef}
-                        style={{ width: '100%', height: '100%', display: 'block' }}
-                        aria-label="Health score timeline chart"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <h3 className="section-title" style={{ marginBottom: 'var(--space-3)' }}>Recommendations</h3>
-                  {insights.recommendations?.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                      {insights.recommendations.map((rec, idx) => {
-                        const isPositive = /strong|continue current/i.test(rec);
-                        return (
-                          <div
-                            key={idx}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: 'var(--space-3)',
-                              padding: 'var(--space-4)',
-                              background: isPositive ? 'var(--bg-surface-elevated)' : 'var(--bg-surface-elevated)',
-                              border: `1px solid ${isPositive ? 'var(--bg-border)' : 'var(--status-moderate)'}`,
-                              borderRadius: 'var(--radius-md)',
-                            }}
-                          >
-                            {isPositive ? (
-                              <CheckCircle size={20} style={{ color: 'var(--status-healthy)', flexShrink: 0, marginTop: 2 }} aria-hidden />
-                            ) : (
-                              <AlertTriangle size={20} style={{ color: 'var(--status-moderate)', flexShrink: 0, marginTop: 2 }} aria-hidden />
-                            )}
-                            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-primary)', lineHeight: 1.5 }}>{rec}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div style={{ padding: 'var(--space-4)', color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>
-                      No recommendations for this mission.
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div style={{ padding: 'var(--space-4)', color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-4)' }}>
-                No API insight payload for this mission (backend may have no processed images for this ID).
               </div>
             )}
 
-            <FieldIntelligence selectedMissionId={selectedMission} />
+            <div style={{ marginBottom: 'var(--space-6)' }}>
+              <h3 className="section-title" style={{ marginBottom: 'var(--space-3)' }}>Recommendations</h3>
+              {synthesizedRecs.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                  {synthesizedRecs.map((rec, idx) => {
+                    const isPositive = /above baseline|producing consistent|recovery|continue current/i.test(rec);
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 'var(--space-3)',
+                          padding: 'var(--space-4)',
+                          background: 'var(--bg-surface-elevated)',
+                          border: `1px solid ${isPositive ? 'var(--bg-border)' : 'var(--status-moderate)'}`,
+                          borderRadius: 'var(--radius-md)',
+                        }}
+                      >
+                        {isPositive ? (
+                          <CheckCircle size={20} style={{ color: 'var(--status-healthy)', flexShrink: 0, marginTop: 2 }} aria-hidden />
+                        ) : (
+                          <AlertTriangle size={20} style={{ color: 'var(--status-moderate)', flexShrink: 0, marginTop: 2 }} aria-hidden />
+                        )}
+                        <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-primary)', lineHeight: 1.5 }}>{rec}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ padding: 'var(--space-4)', color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                  No synthesized recommendations available.
+                </div>
+              )}
+            </div>
+
+            {loadingInsights ? (
+              <div style={{ padding: 'var(--space-4)', color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-4)' }}>
+                Loading latest mission insight payload…
+              </div>
+            ) : null}
+
+            {/* Full mission timeline (all missions rendered, no selector) */}
+            <FieldIntelligence />
           </>
         )}
       </div>
